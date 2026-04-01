@@ -13,7 +13,7 @@
   --secondary: #C8C2DC;
   --secondary-foreground: #2D2B3E;
   --muted: #E8E4F3;
-  --muted-foreground: #8B86A3;
+  --muted-foreground: #6F6986;
   --accent: #e9ebef;
   --accent-foreground: #2D2B3E;
   --destructive: #d4183d;
@@ -22,9 +22,9 @@
   --input: transparent;
   --input-background: #f7f6fa;
   --switch-background: #D1CDE1;
-  --font-weight-medium: 400;
-  --font-weight-normal: 300;
-  --ring: oklch(0.708 0 0);
+  --font-weight-medium: 500;
+  --font-weight-normal: 400;
+  --ring: #696A8E;
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -128,6 +128,7 @@
     @apply bg-background text-foreground;
     /* Ensure safe areas are respected on iOS */
     min-height: 100dvh;
+    -webkit-text-size-adjust: 100%;
   }
 
   /* Ensure the app root fills the full dynamic viewport */
@@ -135,6 +136,29 @@
     min-height: 100dvh;
     display: flex;
     flex-direction: column;
+  }
+
+  /* Clear, brand-consistent focus styling */
+  :where(
+      button,
+      [role="button"],
+      a,
+      input,
+      textarea,
+      select,
+      [tabindex]:not([tabindex="-1"])
+    ):focus-visible {
+    outline: 2px solid #696A8E;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(105, 106, 142, 0.2);
+  }
+
+  button {
+    transition: transform 240ms ease, opacity 240ms ease, background-color 240ms ease, color 240ms ease;
+  }
+
+  button:active {
+    transform: scale(0.96);
   }
 }
 
@@ -195,6 +219,22 @@
 
 html {
   font-size: var(--font-size);
+}
+
+/* Reduce sensory load when users request less motion */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  button:active {
+    transform: none !important;
+  }
 }
 
 /* Mobile-specific styles */

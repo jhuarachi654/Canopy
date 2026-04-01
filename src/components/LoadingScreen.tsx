@@ -1,5 +1,5 @@
 import React from 'react';
-import { motion } from 'motion/react';
+import { motion, useReducedMotion } from 'motion/react';
 import svgPaths from '../imports/Frame47296-1/svg-0hdeo07ddu';
 
 interface LoadingScreenProps {
@@ -8,13 +8,15 @@ interface LoadingScreenProps {
 }
 
 export default function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
+  const prefersReducedMotion = useReducedMotion();
   const handleEnter = () => {
     onLoadingComplete();
   };
 
   return (
     <motion.div
-      className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-[#5B5E88] via-[#7B7EA8] to-[#9B9EC8] overflow-hidden"
+      className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-gradient-to-br from-[#5B5E88] via-[#7B7EA8] to-[#9B9EC8] overflow-hidden"
+      style={{ paddingTop: 'max(env(safe-area-inset-top), 64px)' }}
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       transition={{ duration: 0.5 }}
@@ -22,13 +24,13 @@ export default function LoadingScreen({ onLoadingComplete }: LoadingScreenProps)
       {/* Canopy Flower Logo */}
       <motion.div
         className="mb-8 w-24 h-24"
-        initial={{ scale: 0, opacity: 0 }}
+        initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.8, opacity: 0 }}
         animate={{ 
-          scale: 1, 
+          scale: prefersReducedMotion ? 1 : [0.9, 1.04, 1],
           opacity: 1
         }}
         transition={{ 
-          duration: 0.8, 
+          duration: 0.35, 
           ease: "easeOut"
         }}
       >

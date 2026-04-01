@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ChevronRight, RefreshCw, ImagePlus, Camera, Image, X } from 'lucide-react';
 import { toast } from 'sonner@2.0.3';
 import type { Todo, JournalEntry } from '../App';
@@ -23,15 +23,24 @@ interface JournalScreenProps {
 
 // Daily prompts from the spec
 const DAILY_PROMPTS = [
-  "How did today feel?",
-  "What's one small thing you did for yourself today?",
-  "What's one small win you had today?",
-  "What would make tomorrow feel a little easier?",
-  "What do you wish someone knew about your day?",
-  "What surprised you today?",
-  "What did your body need today?",
-  "What are you still carrying from today?",
-  "What's something you want to remember about today?"
+  "What's one tiny thing you could do right now that would take less than two minutes?",
+  "What's one thing you're avoiding? What's the smallest first step?",
+  "What's one thing that, if you did it, would make the rest of today feel easier?",
+  "What's one thing circling your head that you want to set down here?",
+  "What's one thing you don't want to forget tomorrow?",
+  "What's one thing you're holding onto that you can let go of for now?",
+  "What's one thing you did today — even if it wasn't on your list?",
+  "What's one thing you started, even if you didn't finish it?",
+  "What's one thing that was \"good enough\" today?",
+  "What's one thing that took longer or shorter than you expected?",
+  "Looking back, what actually got your time and attention today?",
+  "What's one thing you thought would take forever but didn't?",
+  "What's one thing that helped you focus or get started today?",
+  "What's one thing that made something harder than it needed to be?",
+  "What's one thing you'd do differently next time?",
+  "What's one thing you're closing the door on so you can rest?",
+  "What's one thing that can wait until tomorrow?",
+  "What's one thing you're giving yourself permission to stop thinking about tonight?"
 ];
 
 export default function JournalScreen({
@@ -40,6 +49,7 @@ export default function JournalScreen({
   onAddEntry,
   onUpdateEntry
 }: JournalScreenProps) {
+  const prefersReducedMotion = useReducedMotion();
   const [activeTab, setActiveTab] = useState<'today' | 'archive'>('today');
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [response, setResponse] = useState('');
@@ -234,31 +244,42 @@ export default function JournalScreen({
           
           {/* Category label */}
           {!isEditing && (
-            <div className="text-center mb-4">
-              <span className="text-sm text-gray-400">reflection</span>
+            <div className="text-center mb-4 relative">
+              <span className="text-sm text-gray-400">Daily Reflection</span>
+              <motion.button
+                onClick={shufflePrompt}
+                className="absolute -top-1 right-0 flex items-center text-xs text-[#8B86A3] hover:text-[#696A8E] transition-colors"
+                whileTap={prefersReducedMotion ? {} : { scale: 0.96 }}
+                aria-label="Shuffle prompt"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+              </motion.button>
             </div>
           )}
 
           {/* Prompt */}
-          <h1 className="font-serif text-3xl text-center mb-6 text-gray-900">
-            {DAILY_PROMPTS[currentPromptIndex]}
-          </h1>
-
-          {/* Shuffle button */}
-          <button
-            onClick={shufflePrompt}
-            className="flex items-center gap-2 mx-auto text-sm hover:text-gray-600 transition-colors mb-8 text-[#696a8e]"
-          >
-            <RefreshCw className="w-4 h-4" />
-            shuffle prompt
-          </button>
+          <div className="h-[112px] mb-4 px-2 flex items-center justify-center">
+            <AnimatePresence mode="wait">
+              <motion.h1
+                key={currentPromptIndex}
+                className="font-serif text-2xl text-center text-gray-900 leading-tight"
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                transition={{ duration: 0.28 }}
+              >
+                {DAILY_PROMPTS[currentPromptIndex]}
+              </motion.h1>
+            </AnimatePresence>
+          </div>
 
           {/* Text area */}
           <textarea
             value={response}
             onChange={(e) => setResponse(e.target.value)}
             placeholder="Answer here..."
-            className="w-full min-h-[200px] border-0 outline-none resize-none text-gray-700 placeholder:text-gray-300 rounded-[8px] bg-[#0000000d] mx-[4px] my-[0px] p-[8px]"
+            aria-label="Journal response"
+            className="w-full min-h-[220px] border border-[#D9D4E8] resize-none text-[#2D2B3E] placeholder:text-[#8F89A8] rounded-xl bg-white mx-[4px] my-[0px] p-4 leading-7 focus:outline-none focus:ring-2 focus:ring-[#696A8E]/35 focus:border-[#696A8E]"
             style={{ fontFamily: 'Inter, sans-serif' }}
           />
 
@@ -370,13 +391,22 @@ export default function JournalScreen({
                 </button>
               </div>
             ) : (
-              <button
+              <motion.button
                 onClick={handleSave}
                 disabled={!response.trim()}
                 className="px-8 py-3 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-full transition-colors font-medium"
+                animate={
+                  !response.trim()
+                    ? { scale: 1 }
+                    : prefersReducedMotion
+                      ? { opacity: 1 }
+                      : { scale: [1, 1.03, 1] }
+                }
+                transition={{ duration: 0.32, repeat: !response.trim() || prefersReducedMotion ? 0 : Infinity, repeatDelay: 2.2 }}
+                whileTap={prefersReducedMotion ? {} : { scale: 0.96 }}
               >
                 Save
-              </button>
+              </motion.button>
             )}
           </div>
         </div>

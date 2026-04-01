@@ -147,6 +147,7 @@ export default function TaskHistoryScreen({
   return (
     <div className="flex flex-col h-full overflow-hidden">
       <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 pt-4">
+        <h2 className="text-xs tracking-widest text-gray-400 mb-3 uppercase">A record of your tasks and thoughts</h2>
         {/* Header */}
         <h2 className="font-serif text-4xl mb-6 text-[#2D2B3E]">Log</h2>
 

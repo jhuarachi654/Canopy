@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { Send, Sparkles } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { Send, Sparkles, Check } from 'lucide-react';
 import type { Todo, JournalEntry } from '../App';
 import JournalEntryDetailView from './JournalEntryDetailView';
 
@@ -38,12 +38,18 @@ export default function GameScreen({
   journalEntries = [],
   todos,
 }: GameScreenProps) {
+  const prefersReducedMotion = useReducedMotion();
   const [hasJournaledToday, setHasJournaledToday] = useState(false);
   const [completedTasksToday, setCompletedTasksToday] = useState(0);
   const [selectedPlant, setSelectedPlant] = useState('quiet-fern');
   const [reflectionText, setReflectionText] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showDetailView, setShowDetailView] = useState(false);
+  const [showLevelBurst, setShowLevelBurst] = useState(false);
+  const [displayedXP, setDisplayedXP] = useState(0);
+  const [displayedProgressPercentage, setDisplayedProgressPercentage] = useState(0);
+  const [didTwoMinuteReset, setDidTwoMinuteReset] = useState(false);
+  const prevLevelRef = useRef(playerProgress.level);
 
   // Load selected plant from localStorage
   useEffect(() => {
@@ -83,6 +89,16 @@ export default function GameScreen({
 
   const currentPlant = plants[selectedPlant as keyof typeof plants] || plants['quiet-fern'];
 
+  useEffect(() => {
+    if (playerProgress.level > prevLevelRef.current) {
+      setShowLevelBurst(true);
+      const timeoutId = setTimeout(() => setShowLevelBurst(false), 420);
+      prevLevelRef.current = playerProgress.level;
+      return () => clearTimeout(timeoutId);
+    }
+    prevLevelRef.current = playerProgress.level;
+  }, [playerProgress.level]);
+
   // Check if user has journaled today
   useEffect(() => {
     const today = new Date().toISOString().split('T')[0];
@@ -112,6 +128,67 @@ export default function GameScreen({
   
   const xpForNextLevel = getXPForNextLevel(playerProgress.level);
   const progressPercentage = (playerProgress.currentXP / xpForNextLevel) * 100;
+
+  useEffect(() => {
+    if (prefersReducedMotion) {
+      setDisplayedXP(playerProgress.currentXP);
+      setDisplayedProgressPercentage(progressPercentage);
+      return;
+    }
+
+    const duration = 360;
+    const startTime = performance.now();
+    const startXP = 0;
+    const startPct = 0;
+    let frameId = 0;
+
+    const tick = (now: number) => {
+      const elapsed = now - startTime;
+      const t = Math.min(elapsed / duration, 1);
+      const eased = 1 - Math.pow(1 - t, 3);
+
+      setDisplayedXP(Math.round(startXP + (playerProgress.currentXP - startXP) * eased));
+      setDisplayedProgressPercentage(startPct + (progressPercentage - startPct) * eased);
+
+      if (t < 1) {
+        frameId = requestAnimationFrame(tick);
+      }
+    };
+
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [playerProgress.currentXP, progressPercentage, prefersReducedMotion]);
+
+  useEffect(() => {
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      const stored = localStorage.getItem(`lifelevel-reset-${today}`);
+      setDidTwoMinuteReset(stored === 'true');
+    } catch {
+      setDidTwoMinuteReset(false);
+    }
+  }, []);
+
+  const markTwoMinuteReset = () => {
+    const next = !didTwoMinuteReset;
+    setDidTwoMinuteReset(next);
+    const today = new Date().toISOString().split('T')[0];
+    try {
+      localStorage.setItem(`lifelevel-reset-${today}`, String(next));
+      window.dispatchEvent(new Event('canopy-bonus-updated'));
+    } catch {
+      // no-op
+    }
+  };
+
+  const focusModeToday = (() => {
+    try {
+      const enabled = JSON.parse(localStorage.getItem('lifelevel-focus-mode') || 'true');
+      return enabled && completedTasksToday > 0;
+    } catch {
+      return completedTasksToday > 0;
+    }
+  })();
 
   // Calculate year garden data (365 days)
   const generateYearGarden = () => {
@@ -160,10 +237,11 @@ export default function GameScreen({
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
       >
+        <h2 className="text-xs tracking-widest text-gray-400 mb-3 uppercase">Your Garden</h2>
         
         {/* Plant Card */}
         <motion.div 
-          className="bg-white/90 backdrop-blur-sm rounded-3xl shadow-sm p-6 mb-6 flex flex-col items-center border border-[#E8E4F3]"
+          className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-sm p-6 mb-6 flex flex-col items-center border border-[#E8E4F3]"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.1 }}
@@ -286,16 +364,16 @@ export default function GameScreen({
             <div className="flex items-center justify-between text-sm mb-2">
               <span className="text-gray-400">To level {playerProgress.level + 1}</span>
               <span className="text-[#34A0DE] font-medium">
-                {playerProgress.currentXP} / {xpForNextLevel} pts
+                {displayedXP} / {xpForNextLevel} pts
               </span>
             </div>
             
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-[#3431DE] rounded-full"
+                className="h-full bg-[#1ABF8F] rounded-full"
                 initial={{ width: 0 }}
-                animate={{ width: `${progressPercentage}%` }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
+                animate={{ width: `${displayedProgressPercentage}%` }}
+                transition={{ duration: 0.35, ease: 'easeOut' }}
               />
             </div>
           </div>
@@ -303,6 +381,27 @@ export default function GameScreen({
           <p className="text-xs text-gray-400 text-center">
             Tasks + journal entries earn points
           </p>
+          <AnimatePresence>
+            {showLevelBurst && (
+              <motion.div
+                className="pointer-events-none absolute inset-0 flex items-center justify-center"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                <motion.span
+                  className="text-2xl"
+                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.9, y: 6 }}
+                  animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, scale: 1.05, y: -6 }}
+                  exit={{ opacity: 0 }}
+                  transition={{ duration: 0.36 }}
+                >
+                  ✨
+                </motion.span>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.div>
 
         {/* Today's Watering Card */}
@@ -443,21 +542,50 @@ export default function GameScreen({
                 </AnimatePresence>
               </motion.div>
             </motion.div>
-          </div>
-        </motion.div>
 
-        {/* Year Garden Section */}
-        <motion.div 
-          className="mb-6"
-          initial={{ y: 20, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          transition={{ duration: 0.4, delay: 0.3 }}
-        >
-          <h4 className="text-xs text-[#8B86A3] mb-3 uppercase tracking-widest px-1 font-light">
-            Your Growth This Year
-          </h4>
-          
-          
+            {/* Divider */}
+            <div className="border-t border-[#EBE8F4]"></div>
+
+            {/* Focus mode used today */}
+            <motion.div className="flex items-center justify-between">
+              <div>
+                <p className="text-[#2D2B3E] font-light">Focus mode used today</p>
+                <p className="text-sm text-[#8B86A3]">+10 pts</p>
+              </div>
+              <motion.div
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  focusModeToday ? 'bg-gradient-to-br from-[#A8C5DA] to-[#8B86A3]' : 'border-2 border-[#E8E4F3] bg-white'
+                }`}
+              >
+                {focusModeToday && (
+                  <Check className="w-6 h-6 text-white" />
+                )}
+              </motion.div>
+            </motion.div>
+
+            {/* Divider */}
+            <div className="border-t border-[#EBE8F4]"></div>
+
+            {/* Two minute reset */}
+            <motion.button
+              onClick={markTwoMinuteReset}
+              className="w-full text-left flex items-center justify-between"
+            >
+              <div>
+                <p className="text-[#2D2B3E] font-light">2-minute reset</p>
+                <p className="text-sm text-[#8B86A3]">+5 pts</p>
+              </div>
+              <motion.div
+                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                  didTwoMinuteReset ? 'bg-gradient-to-br from-[#A8C5DA] to-[#8B86A3]' : 'border-2 border-[#E8E4F3] bg-white'
+                }`}
+              >
+                {didTwoMinuteReset && (
+                  <Check className="w-6 h-6 text-white" />
+                )}
+              </motion.div>
+            </motion.button>
+          </div>
         </motion.div>
 
         {/* Plant Collection */}
@@ -508,28 +636,7 @@ export default function GameScreen({
                   } : {}}
                   whileTap={isUnlocked ? { scale: 0.98 } : {}}
                 >
-                  {/* Selected indicator */}
-                  <AnimatePresence>
-                    {isSelected && (
-                      <motion.div 
-                        className="absolute top-2 right-2 w-6 h-6 bg-[#8B86A3] rounded-full flex items-center justify-center"
-                        initial={{ scale: 0, rotate: -180 }}
-                        animate={{ 
-                          scale: 1, 
-                          rotate: 0
-                        }}
-                        exit={{ scale: 0, rotate: 180 }}
-                        transition={{ type: "spring", stiffness: 200 }}
-                      >
-                        <motion.div
-                          animate={{ rotate: [0, 10, -10, 0] }}
-                          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-                        >
-                          <Sparkles className="w-4 h-4 text-white" />
-                        </motion.div>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
+                  {/* Selected state is shown by border styling only */}
                   
                   {/* Plant image */}
                   <div className="aspect-square bg-gradient-to-br from-[#EBE8F4] to-[#E0DCF0] rounded-2xl mb-3 flex items-center justify-center overflow-hidden">

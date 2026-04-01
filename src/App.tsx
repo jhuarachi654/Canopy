@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { motion } from 'motion/react';
+import React, { useState, useEffect, useRef } from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import { Building2, Home, Cloud, PawPrint } from 'lucide-react';
 import TodoListScreen from './components/TodoListScreenNew';
 import GameScreen from './components/GameScreenNew';
@@ -107,6 +107,7 @@ const backgroundThemes: BackgroundTheme[] = [
 ];
 
 export default function App() {
+  const prefersReducedMotion = useReducedMotion();
   const [activeScreen, setActiveScreen] = useState<'todos' | 'game' | 'log' | 'journal' | 'settings'>('todos');
   const [todos, setTodos] = useState<Todo[]>([]);
   const [reflections, setReflections] = useState<WeeklyReflection[]>([]);
@@ -142,12 +143,50 @@ export default function App() {
       return true; // Default to showing onboarding on error
     }
   });
+  const [focusModeOn, setFocusModeOn] = useState<boolean>(true);
+  const [bonusVersion, setBonusVersion] = useState(0);
 
   const [gameSettings, setGameSettings] = useState<GameSettings>({
     animationType: 'sparkles',
   });
 
   const supabase = getSupabaseClient();
+  const hasInitializedProgressPersistence = useRef(false);
+
+  useEffect(() => {
+    const syncFocusMode = () => {
+      try {
+        const stored = localStorage.getItem('lifelevel-focus-mode');
+        setFocusModeOn(stored ? JSON.parse(stored) : true);
+      } catch {
+        setFocusModeOn(true);
+      }
+    };
+    syncFocusMode();
+    window.addEventListener('storage', syncFocusMode);
+    window.addEventListener('focus', syncFocusMode);
+    window.addEventListener('canopy-focus-mode-updated', syncFocusMode);
+    return () => {
+      window.removeEventListener('storage', syncFocusMode);
+      window.removeEventListener('focus', syncFocusMode);
+      window.removeEventListener('canopy-focus-mode-updated', syncFocusMode);
+    };
+  }, []);
+
+  useEffect(() => {
+    const handleBonusUpdated = () => setBonusVersion((v) => v + 1);
+    window.addEventListener('canopy-bonus-updated', handleBonusUpdated);
+    return () => window.removeEventListener('canopy-bonus-updated', handleBonusUpdated);
+  }, []);
+
+  useEffect(() => {
+    if (!user) return;
+    if (!hasInitializedProgressPersistence.current) {
+      hasInitializedProgressPersistence.current = true;
+      return;
+    }
+    saveProgress(playerProgress);
+  }, [playerProgress.totalXP, playerProgress.currentXP, playerProgress.level, user]);
 
   // Extended level system configuration with hilarious adulting titles
   const levelConfig = [
@@ -900,39 +939,33 @@ export default function App() {
   };
 
   const addXP = (amount: number) => {
-    const newTotalXP = playerProgress.totalXP + amount;
-    const { level: newLevel } = calculateLevel(newTotalXP);
-    const oldLevel = playerProgress.level;
-    
-    // Check for level up
-    if (newLevel > oldLevel) {
-      const levelConfigItem = levelConfig.find(config => config.level === newLevel);
-      if (levelConfigItem) {
-        // Import toast and create a more engaging level up notification
-        import('sonner@2.0.3').then(({ toast }) => {
-          setTimeout(() => {
-            toast.success(
-              `${levelConfigItem.emoji} LEVEL UP! You're now a ${levelConfigItem.title}! ${levelConfigItem.emoji}\n\n${levelConfigItem.reward}`, 
-              { duration: 4000 } // 4 seconds for level up (slightly longer since it's important)
-            );
-          }, 800);
-        });
+    setPlayerProgress((prev) => {
+      const safeTotalXP = Number.isFinite(prev.totalXP) ? prev.totalXP : 0;
+      const newTotalXP = Math.max(0, safeTotalXP + amount);
+      const { level: newLevel, currentXP } = calculateLevel(newTotalXP);
+
+      if (newLevel > prev.level) {
+        const levelConfigItem = levelConfig.find(config => config.level === newLevel);
+        if (levelConfigItem) {
+          import('sonner@2.0.3').then(({ toast }) => {
+            setTimeout(() => {
+              toast.success(
+                `${levelConfigItem.emoji} LEVEL UP! You're now a ${levelConfigItem.title}! ${levelConfigItem.emoji}\n\n${levelConfigItem.reward}`,
+                { duration: 4000 }
+              );
+            }, 800);
+          });
+        }
       }
-    }
-    
-    const { currentXP } = calculateLevel(newTotalXP);
-    
-    const updatedProgress = {
-      level: newLevel,
-      currentXP,
-      totalXP: newTotalXP,
-      unlockedRewards: playerProgress.unlockedRewards
-    };
-    
-    setPlayerProgress(updatedProgress);
-    
-    // Save progress to database
-    saveProgress(updatedProgress);
+
+      const updatedProgress = {
+        level: newLevel,
+        currentXP,
+        totalXP: newTotalXP,
+        unlockedRewards: prev.unlockedRewards || [],
+      };
+      return updatedProgress;
+    });
   };
 
   const addTodo = (text: string, isFirstTime: boolean = false) => {
@@ -953,6 +986,10 @@ export default function App() {
   };
 
   const toggleTodo = (id: string) => {
+    const targetTodo = todos.find(todo => todo.id === id);
+    if (!targetTodo) return;
+    const isCompleting = !targetTodo.completed;
+
     const updatedTodos = todos.map(todo =>
       todo.id === id
         ? {
@@ -968,9 +1005,49 @@ export default function App() {
     
     // Save to database
     saveTasks(updatedTodos);
-    
-    // Note: XP is now only awarded when tasks are destroyed in the game screen
+
+    // Award XP on completion; remove XP if task is unchecked
+    addXP(isCompleting ? 10 : -10);
   };
+
+  // Keep XP consistent with completed task count as a fallback guard.
+  useEffect(() => {
+    const completedCount = todos.filter(todo => todo.completed && !todo.destroyedAt).length;
+    const taskXP = completedCount * 10;
+
+    const today = new Date().toISOString().split('T')[0];
+    const completedToday = todos.filter(todo => {
+      if (!todo.completedAt || todo.destroyedAt) return false;
+      return new Date(todo.completedAt).toISOString().split('T')[0] === today;
+    }).length;
+
+    const journalToday = journalEntries.some(entry =>
+      new Date(entry.createdAt).toISOString().split('T')[0] === today
+    );
+
+    let focusBonus = 0;
+    let resetBonus = 0;
+    try {
+      const focusEnabled = JSON.parse(localStorage.getItem('lifelevel-focus-mode') || 'true');
+      focusBonus = focusEnabled && completedToday > 0 ? 10 : 0;
+      resetBonus = localStorage.getItem(`lifelevel-reset-${today}`) === 'true' ? 5 : 0;
+    } catch {
+      focusBonus = completedToday > 0 ? 10 : 0;
+      resetBonus = 0;
+    }
+
+    const journalBonus = journalToday ? 10 : 0;
+    const expectedTotalXP = taskXP + journalBonus + focusBonus + resetBonus;
+    if (playerProgress.totalXP === expectedTotalXP) return;
+
+    const { level, currentXP } = calculateLevel(expectedTotalXP);
+    setPlayerProgress(prev => ({
+      ...prev,
+      level,
+      currentXP,
+      totalXP: expectedTotalXP,
+    }));
+  }, [todos, journalEntries, bonusVersion]);
 
   const editTodo = (id: string, newText: string) => {
     const updatedTodos = todos.map(todo =>
@@ -1241,8 +1318,12 @@ export default function App() {
   // Show loading screen while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-900">
-        <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-[#E0DCF0]">
+        <div className="w-64 space-y-3">
+          <div className="h-8 rounded-2xl bg-white/60 animate-pulse" />
+          <div className="h-24 rounded-3xl bg-white/55 animate-pulse" />
+          <div className="h-12 rounded-full bg-white/65 animate-pulse" />
+        </div>
       </div>
     );
   }
@@ -1272,6 +1353,24 @@ export default function App() {
         paddingTop: 'max(env(safe-area-inset-top), 50px)',
       }}
     >
+      {focusModeOn && (
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-0 rounded-[46px] z-[2]"
+          animate={
+            prefersReducedMotion
+              ? { opacity: 0.25 }
+              : {
+                  boxShadow: [
+                    'inset 0 0 0 1px rgba(20,184,166,0.14)',
+                    'inset 0 0 0 2px rgba(20,184,166,0.24)',
+                    'inset 0 0 0 1px rgba(20,184,166,0.14)',
+                  ],
+                }
+          }
+          transition={{ duration: 0.36, repeat: prefersReducedMotion ? 0 : Infinity, repeatType: 'loop' }}
+        />
+      )}
       {/* Removed immersive game background - using clean gradient instead */}
       
       {/* Fixed Top Navigation */}
@@ -1310,7 +1409,7 @@ export default function App() {
           paddingBottom: `calc(5rem + env(safe-area-inset-bottom))`
         }}
         key={activeScreen}
-        initial={{ opacity: 0, y: 20 }}
+        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.3 }}
       >

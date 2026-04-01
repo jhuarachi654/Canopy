@@ -1,4 +1,5 @@
 import React from 'react';
+import { motion, useReducedMotion } from 'motion/react';
 import { ClipboardList, Sun, Calendar, MoreHorizontal, Flower2 } from 'lucide-react';
 
 interface NavigationBarProps {
@@ -16,6 +17,7 @@ export default function NavigationBar({
   onLogout,
   isGuestMode = false,
 }: NavigationBarProps) {
+  const prefersReducedMotion = useReducedMotion();
   const navItems = [
     {
       id: 'todos' as const,
@@ -29,7 +31,7 @@ export default function NavigationBar({
     },
     {
       id: 'journal' as const,
-      label: 'Today',
+      label: 'Journal',
       icon: Sun,
     },
     {
@@ -46,13 +48,13 @@ export default function NavigationBar({
 
   return (
     <div
-      className="fixed bottom-0 left-0 right-0 flex items-center justify-center z-50"
+      className="absolute bottom-0 left-0 right-0 flex items-center justify-center z-50"
       style={{
         paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
         paddingTop: '1.5rem',
       }}
     >
-      <div className="bg-white/90 backdrop-blur-lg rounded-full shadow-lg px-8 py-3 flex items-center gap-6">
+      <div className="bg-white/90 backdrop-blur-lg rounded-full shadow-lg px-5 py-3 w-[calc(100%-2rem)] max-w-[358px] flex items-center justify-between">
         {navItems.map((item) => {
           const isActive = activeScreen === item.id;
           const Icon = item.icon;
@@ -66,15 +68,26 @@ export default function NavigationBar({
               }`}
             >
               {/* Icon Container */}
-              <div
+              <motion.div
                 className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
                   isActive
                     ? 'bg-gray-900 text-white'
                     : 'bg-transparent text-gray-400 hover:text-gray-600'
                 }`}
+                whileTap={prefersReducedMotion ? {} : { scale: 0.96 }}
+                animate={
+                  prefersReducedMotion
+                    ? { opacity: isActive ? 1 : 0.95 }
+                    : { scale: isActive ? [1, 1.08, 1] : 1, y: isActive ? [0, -1, 0] : 0 }
+                }
+                transition={
+                  prefersReducedMotion
+                    ? { duration: 0.2 }
+                    : { duration: 0.32, type: 'spring', stiffness: 300, damping: 20 }
+                }
               >
                 <Icon className="w-5 h-5" strokeWidth={2} />
-              </div>
+              </motion.div>
 
               {/* Label */}
               <span

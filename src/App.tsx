@@ -1356,7 +1356,7 @@ export default function App() {
       {focusModeOn && (
         <motion.div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-0 rounded-[46px] z-[2]"
+          className="pointer-events-none absolute inset-0 z-[2]"
           animate={
             prefersReducedMotion
               ? { opacity: 0.25 }

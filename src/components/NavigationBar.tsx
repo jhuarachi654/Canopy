@@ -54,7 +54,7 @@ export default function NavigationBar({
         paddingTop: '1.5rem',
       }}
     >
-      <div className="bg-white/90 backdrop-blur-lg rounded-full shadow-lg px-5 py-3 w-[calc(100%-2rem)] max-w-[358px] flex items-center justify-between">
+      <div className="bg-white/90 backdrop-blur-lg rounded-full shadow-lg px-5 py-3 w-[calc(100%-2rem)] max-w-[min(42rem,calc(100%-2rem))] flex items-center justify-between">
         {navItems.map((item) => {
           const isActive = activeScreen === item.id;
           const Icon = item.icon;

@@ -1,7 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { ChevronRight, User, Sparkles, Focus, Bell, CircleHelp, Bug } from 'lucide-react';
 import type { PlayerProgress } from '../App';
+
+const FOCUS_MODE_STORAGE_KEY = 'lifelevel-focus-mode';
+const FOCUS_MODE_UPDATED_EVENT = 'canopy-focus-mode-updated';
 
 interface SettingsScreenProps {
   user: any;
@@ -27,33 +30,73 @@ export default function SettingsScreen({
   levelConfig,
 }: SettingsScreenProps) {
   const [userName, setUserName] = useState(user?.user_metadata?.name || user?.email?.split('@')[0] || 'Guest');
-  const [focusMode, setFocusMode] = useState(false);
+  const [focusMode, setFocusMode] = useState<boolean>(() => {
+    try {
+      const stored = localStorage.getItem(FOCUS_MODE_STORAGE_KEY);
+      return stored ? JSON.parse(stored) : true;
+    } catch {
+      return true;
+    }
+  });
+
+  useEffect(() => {
+    const syncFocusMode = () => {
+      try {
+        const stored = localStorage.getItem(FOCUS_MODE_STORAGE_KEY);
+        setFocusMode(stored ? JSON.parse(stored) : true);
+      } catch {
+        setFocusMode(true);
+      }
+    };
+
+    window.addEventListener('storage', syncFocusMode);
+    window.addEventListener('focus', syncFocusMode);
+    window.addEventListener(FOCUS_MODE_UPDATED_EVENT, syncFocusMode);
+
+    return () => {
+      window.removeEventListener('storage', syncFocusMode);
+      window.removeEventListener('focus', syncFocusMode);
+      window.removeEventListener(FOCUS_MODE_UPDATED_EVENT, syncFocusMode);
+    };
+  }, []);
+
+  const toggleFocusMode = () => {
+    const next = !focusMode;
+    setFocusMode(next);
+
+    try {
+      localStorage.setItem(FOCUS_MODE_STORAGE_KEY, JSON.stringify(next));
+      window.dispatchEvent(new Event(FOCUS_MODE_UPDATED_EVENT));
+    } catch {
+      // no-op
+    }
+  };
 
   // Get current level info
   const currentLevelInfo = levelConfig.find(l => l.level === playerProgress.level);
   const plantName = currentLevelInfo?.title || "Getting Started";
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 pt-4">
-        <h2 className="font-serif text-4xl mb-6 text-gray-900">Profile</h2>
+    <div className="flex h-full flex-col">
+      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-24 pt-4">
+        <h2 className="mb-6 font-serif text-4xl text-gray-900">Profile</h2>
 
         {/* Profile header */}
-        <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-sm p-6 mb-4 border border-[#E8E4F3]">
+        <div className="mb-4 rounded-3xl border border-[var(--border-soft)] bg-[var(--surface-base-85)] p-6 shadow-sm backdrop-blur-sm">
           <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-[#ECE8F8] text-[#696A8E] flex items-center justify-center text-2xl">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--surface-card-subtle-9)] text-2xl text-[var(--accent-pill)]">
               🌿
             </div>
             <div className="flex-1">
-              <p className="text-xs tracking-widest uppercase text-[#8B86A3]">Your profile</p>
-              <p className="text-xl text-[#2D2B3E]">{userName}</p>
-              <p className="text-sm text-[#6F6986]">Current plant: {plantName}</p>
+              <p className="text-xs uppercase tracking-widest text-[var(--text-caption-2)]">Your profile</p>
+              <p className="text-xl text-[var(--text-strong-alt)]">{userName}</p>
+              <p className="text-sm text-[var(--text-body-muted-2)]">Current plant: {plantName}</p>
             </div>
           </div>
         </div>
 
         {/* Settings rows */}
-        <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-sm mb-4 border border-[#E8E4F3] overflow-hidden">
+        <div className="mb-4 overflow-hidden rounded-3xl border border-[var(--border-soft)] bg-[var(--surface-base-85)] shadow-sm backdrop-blur-sm">
           {[
             { icon: User, label: 'Edit profile' },
             { icon: Sparkles, label: 'Customize experience' },
@@ -64,42 +107,43 @@ export default function SettingsScreen({
           ].map((item, idx) => (
             <button
               key={item.label}
-              className={`w-full px-5 py-4 flex items-center justify-between hover:bg-[#F7F4FC] transition-colors ${
-                idx < 5 ? 'border-b border-[#EFEAF8]' : ''
+              className={`flex w-full items-center justify-between px-5 py-4 transition-all duration-150 ease-out hover:bg-[var(--surface-hover-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
+                idx < 5 ? 'border-b border-[var(--border-soft-panel)]' : ''
               }`}
             >
               <div className="flex items-center gap-3">
-                <item.icon className="w-4 h-4 text-[#8B86A3]" />
-                <span className="text-[#2D2B3E]">{item.label}</span>
+                <item.icon className="h-4 w-4 text-[var(--text-caption-2)]" />
+                <span className="text-[var(--text-strong-alt)]">{item.label}</span>
               </div>
-              <ChevronRight className="w-4 h-4 text-[#B2AAC8]" />
+              <ChevronRight className="h-4 w-4 text-[var(--accent-icon-muted)]" />
             </button>
           ))}
         </div>
 
         {/* Invite card */}
-        <div className="rounded-3xl shadow-sm p-5 mb-4 border border-[#E8E4F3]"
-          style={{ background: 'linear-gradient(135deg,#F3F0FB 0%,#ECE8F8 55%,#E6F4F3 100%)' }}
+        <div className="mb-4 rounded-3xl border border-[var(--border-soft)] p-5 shadow-sm"
+          style={{ background: 'var(--bg-gradient-settings-invite)' }}
         >
-          <p className="text-xs text-[#8B86A3] uppercase tracking-widest mb-1">Invite a friend</p>
-          <h3 className="text-[#2D2B3E] text-lg mb-1 font-serif">Grow together, gently</h3>
-          <p className="text-sm text-[#6F6986] mb-3">Share Canopy with someone who needs a calm planning space.</p>
-          <button className="px-4 py-2 rounded-full bg-white text-[#696A8E] border border-[#DAD3EC] text-sm hover:bg-[#F7F4FC] transition-colors">
+          <p className="mb-1 text-xs uppercase tracking-widest text-[var(--text-caption-2)]">Invite a friend</p>
+          <h3 className="mb-1 font-serif text-lg text-[var(--text-strong-alt)]">Grow together, gently</h3>
+          <p className="mb-3 text-sm text-[var(--text-body-muted-2)]">Share Canopy with someone who needs a calm planning space.</p>
+          <button className="rounded-full border border-[var(--border-soft-panel-5)] bg-[var(--surface-base)] px-4 py-2 text-sm text-[var(--accent-pill)] transition-all duration-150 ease-out hover:bg-[var(--surface-hover-panel)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40">
             Send invite
           </button>
         </div>
 
         {/* Focus mode control */}
-        <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-sm p-5 mb-4 border border-[#E8E4F3]">
+        <div className="mb-4 rounded-3xl border border-[var(--border-soft)] bg-[var(--surface-base-85)] p-5 shadow-sm backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-[#2D2B3E]">Focus mode</p>
-              <p className="text-sm text-[#6F6986]">Limit today&apos;s list to 3 tasks</p>
+              <p className="text-[var(--text-strong-alt)]">Focus mode</p>
+              <p className="text-sm text-[var(--text-body-muted-2)]">Limit today&apos;s list to 3 tasks</p>
             </div>
             <button
-              onClick={() => setFocusMode(!focusMode)}
-              className={`relative w-14 h-8 rounded-full transition-colors ${focusMode ? 'bg-teal-500' : 'bg-gray-200'}`}
+              onClick={toggleFocusMode}
+              className={`relative h-8 w-14 rounded-full transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base-85)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${focusMode ? 'bg-[var(--accent-teal)] hover:bg-[var(--accent-teal-hover)]' : 'bg-[var(--surface-panel-track-disabled)] hover:bg-[var(--surface-panel-track-neutral)]'}`}
               aria-label="Toggle focus mode"
+              aria-pressed={focusMode}
             >
               <motion.div
                 className="absolute top-1 w-6 h-6 bg-white rounded-full shadow-sm"
@@ -111,14 +155,14 @@ export default function SettingsScreen({
         </div>
 
         {/* Logout */}
-        <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-sm p-6 mb-4 border border-[#E8E4F3]">
+        <div className="mb-4 rounded-3xl border border-[var(--border-soft)] bg-[var(--surface-base-85)] p-6 shadow-sm backdrop-blur-sm">
           <button
             onClick={onLogout}
-            className="w-full py-4 bg-teal-500 hover:bg-teal-600 text-white rounded-full font-medium transition-colors"
+            className="w-full rounded-full bg-[var(--accent-teal)] py-4 font-medium text-white transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base-85)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
           >
             {isGuestMode ? 'Exit guest' : 'Log out'}
           </button>
-          <p className="text-xs text-[#8B86A3] text-center mt-3">
+          <p className="mt-3 text-center text-xs text-[var(--text-caption-2)]">
             Level {playerProgress.level} · {plantName}
           </p>
         </div>

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { ChevronRight, RefreshCw, ImagePlus, Camera, Image, X } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { toast } from 'sonner';
 import type { Todo, JournalEntry } from '../App';
 
 interface JournalScreenProps {
@@ -227,29 +227,32 @@ export default function JournalScreen({
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex h-full flex-col">
       {/* Main Content */}
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 pt-4">
+      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-4">
         {/* Header */}
-        <h2 className="text-xs tracking-widest text-gray-400 mb-6 uppercase">Today's Entry</h2>
+        <h2 className="type-label mb-3 uppercase tracking-widest text-gray-400">TODAY'S REFLECTION</h2>
+        <h2 className="mb-0 font-serif text-[2.6rem] leading-none text-[var(--text-strong-alt)]">Journal</h2>
+        <p className="mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">A few words go a long way.</p>
 
         {/* Prompt Card */}
-        <div className="bg-white rounded-3xl shadow-sm p-8 mb-6">
+        <div className="mb-5 mt-7 rounded-2xl bg-white px-5 pb-5 pt-5 shadow-sm">
           {/* Editing indicator */}
           {isEditing && (
             <div className="text-center mb-4">
-              <span className="text-sm text-teal-500 font-medium">✏️ Editing Entry</span>
+              <span className="type-caption text-teal-500">✏️ Editing Entry</span>
             </div>
           )}
           
           {/* Category label */}
           {!isEditing && (
-            <div className="text-center mb-4 relative">
-              <span className="text-sm text-gray-400">Daily Reflection</span>
+            <div className="relative mb-5 flex items-center justify-center">
+              <span className="type-caption text-gray-400">Daily Reflection</span>
               <motion.button
+                type="button"
                 onClick={shufflePrompt}
-                className="absolute -top-1 right-0 flex items-center text-xs text-[#8B86A3] hover:text-[#696A8E] transition-colors"
-                whileTap={prefersReducedMotion ? {} : { scale: 0.96 }}
+                className="type-caption absolute right-6 flex items-center text-[var(--text-caption-2)] transition-all duration-150 ease-out hover:text-[var(--accent-pill)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+                whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
                 aria-label="Shuffle prompt"
               >
                 <RefreshCw className="w-3.5 h-3.5" />
@@ -258,11 +261,11 @@ export default function JournalScreen({
           )}
 
           {/* Prompt */}
-          <div className="h-[112px] mb-4 px-2 flex items-center justify-center">
+          <div className="mb-4 flex min-h-[64px] items-start justify-center">
             <AnimatePresence mode="wait">
               <motion.h1
                 key={currentPromptIndex}
-                className="font-serif text-2xl text-center text-gray-900 leading-tight"
+                className="w-full text-center text-[var(--text-strong)] [font-family:var(--font-family-display)] [font-size:1.375rem] [font-weight:var(--type-headline-weight)] [line-height:1.2]"
                 initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
@@ -279,8 +282,7 @@ export default function JournalScreen({
             onChange={(e) => setResponse(e.target.value)}
             placeholder="Answer here..."
             aria-label="Journal response"
-            className="w-full min-h-[220px] border border-[#D9D4E8] resize-none text-[#2D2B3E] placeholder:text-[#8F89A8] rounded-xl bg-white mx-[4px] my-[0px] p-4 leading-7 focus:outline-none focus:ring-2 focus:ring-[#696A8E]/35 focus:border-[#696A8E]"
-            style={{ fontFamily: 'Inter, sans-serif' }}
+            className="type-body min-h-[116px] w-full resize-none rounded-xl border border-[var(--accent-soft-border-2)] bg-[var(--surface-base)] p-4 text-[var(--text-strong-alt)] placeholder:text-[var(--text-caption-4)] focus:border-[var(--accent-pill)] focus:outline-none focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-journal)]"
           />
 
           {/* Photo preview if exists */}
@@ -306,8 +308,9 @@ export default function JournalScreen({
                   
                   {/* Remove button */}
                   <button
+                    type="button"
                     onClick={() => removePhoto(index)}
-                    className="absolute -top-2 -right-2 bg-teal-500 text-white rounded-full p-1 shadow-md hover:bg-teal-600 transition-colors"
+                    className="absolute -right-2 -top-2 rounded-full bg-[var(--accent-teal)] p-1 text-white shadow-md transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
                   >
                     <X className="w-3 h-3" />
                   </button>
@@ -317,20 +320,21 @@ export default function JournalScreen({
           )}
 
           {/* Bottom actions */}
-          <div className="flex items-center justify-between mt-6 pt-6 border-t border-gray-100">
+          <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
             {/* Photo upload with menu */}
             <div className="relative photo-menu-container">
               <button
+                type="button"
                 onClick={() => setShowPhotoMenu(!showPhotoMenu)}
                 disabled={photoPreview.length >= 3}
-                className={`flex items-center gap-2 transition-colors ${
+                className={`flex items-center gap-2 transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
                   photoPreview.length >= 3 
-                    ? 'text-gray-300 cursor-not-allowed' 
-                    : 'text-gray-400 hover:text-gray-600 cursor-pointer'
+                    ? 'text-gray-300' 
+                    : 'cursor-pointer text-gray-400 hover:text-[var(--text-body-muted)]'
                 }`}
               >
                 <ImagePlus className="w-5 h-5" />
-                <span className="text-sm">
+                <span className="type-caption">
                   {photoPreview.length === 0 ? 'Add a photo' : `Add photo (${photoPreview.length}/3)`}
                 </span>
               </button>
@@ -342,12 +346,12 @@ export default function JournalScreen({
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
-                    className="absolute bottom-full left-0 mb-2 bg-white rounded-2xl shadow-lg border border-[#E8E4F3] overflow-hidden z-10"
+                    className="absolute bottom-full left-0 z-10 mb-2 overflow-hidden rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-base)] shadow-lg"
                   >
                     {/* Camera option */}
-                    <label className="flex items-center gap-3 px-4 py-3 hover:bg-[#EBE8F4] cursor-pointer transition-colors">
-                      <Camera className="w-5 h-5 text-[#8B86A3]" />
-                      <span className="text-sm text-[#2D2B3E] font-light">Take photo</span>
+                    <label className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--surface-hover-panel-muted)]">
+                      <Camera className="h-5 w-5 text-[var(--text-caption-2)]" />
+                      <span className="type-caption text-[var(--text-strong-alt)]">Take photo</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -358,9 +362,9 @@ export default function JournalScreen({
                     </label>
 
                     {/* Gallery option */}
-                    <label className="flex items-center gap-3 px-4 py-3 hover:bg-[#EBE8F4] cursor-pointer transition-colors border-t border-[#E8E4F3]">
-                      <Image className="w-5 h-5 text-[#8B86A3]" />
-                      <span className="text-sm text-[#2D2B3E] font-light">Choose from gallery</span>
+                    <label className="flex cursor-pointer items-center gap-3 border-t border-[var(--border-soft)] px-4 py-3 transition-colors hover:bg-[var(--surface-hover-panel-muted)]">
+                      <Image className="h-5 w-5 text-[var(--text-caption-2)]" />
+                      <span className="type-caption text-[var(--text-strong-alt)]">Choose from gallery</span>
                       <input
                         type="file"
                         accept="image/*"
@@ -377,24 +381,27 @@ export default function JournalScreen({
             {isEditing ? (
               <div className="flex gap-2">
                 <button
+                  type="button"
                   onClick={handleCancelEdit}
-                  className="px-6 py-3 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-full transition-colors font-light"
+                  className="type-body rounded-full bg-[var(--surface-panel-track-disabled)] px-6 py-3 text-[var(--text-body-muted)] transition-all duration-150 ease-out hover:bg-[var(--surface-panel-track-neutral)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Cancel
                 </button>
                 <button
+                  type="button"
                   onClick={handleUpdate}
                   disabled={!response.trim()}
-                  className="px-8 py-3 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-full transition-colors font-medium"
+                  className="type-body rounded-full bg-[var(--accent-teal)] px-8 py-3 text-white transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Update
                 </button>
               </div>
             ) : (
               <motion.button
+                type="button"
                 onClick={handleSave}
                 disabled={!response.trim()}
-                className="px-8 py-3 bg-teal-500 hover:bg-teal-600 disabled:bg-gray-200 disabled:text-gray-400 text-white rounded-full transition-colors font-medium"
+                className="type-body rounded-full bg-[var(--accent-teal)] px-8 py-3 text-white transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
                 animate={
                   !response.trim()
                     ? { scale: 1 }
@@ -403,7 +410,7 @@ export default function JournalScreen({
                       : { scale: [1, 1.03, 1] }
                 }
                 transition={{ duration: 0.32, repeat: !response.trim() || prefersReducedMotion ? 0 : Infinity, repeatDelay: 2.2 }}
-                whileTap={prefersReducedMotion ? {} : { scale: 0.96 }}
+                whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
               >
                 Save
               </motion.button>
@@ -413,34 +420,35 @@ export default function JournalScreen({
 
         {/* Scroll hint */}
         {todayEntry && (
-          <div className="text-center text-sm text-gray-400 mb-6">
+          <div className="type-caption mb-6 text-center text-gray-400">
             scroll to see past entries
           </div>
         )}
 
         {/* Saved Today Section */}
         {todayEntry && (
-          <div className="mb-6">
-            <h3 className="text-xs tracking-widest text-gray-400 mb-4 uppercase">Saved Today</h3>
+          <div className="mb-4">
+            <h3 className="type-label mb-4 uppercase tracking-widest text-gray-400">Saved Today</h3>
             
             <motion.div 
-              className="bg-white rounded-3xl shadow-sm p-6"
+              className="rounded-2xl bg-white p-4 shadow-sm"
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
               <div className="flex items-start justify-between mb-3">
-                <span className="text-sm text-gray-400">
+                <span className="type-caption text-gray-400">
                   {new Date(todayEntry.createdAt).toLocaleTimeString('en-US', {
                     hour: 'numeric',
                     minute: '2-digit',
                   })}
                 </span>
                 <button 
+                  type="button"
                   onClick={(e) => {
                     e.stopPropagation();
                     handleEditEntry(todayEntry);
                   }}
-                  className="text-sm text-teal-500 hover:text-teal-600 font-light transition-colors"
+                  className="type-caption text-[var(--accent-teal)] transition-all duration-150 ease-out hover:text-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
                 >
                   Edit entry
                 </button>
@@ -448,13 +456,13 @@ export default function JournalScreen({
               
               {/* Show the prompt if it exists */}
               {todayEntry.prompt && (
-                <p className="font-serif text-base text-[#8B86A3] italic mb-3">
+                <p className="type-body mb-3 italic text-[var(--text-caption-2)]">
                   {todayEntry.prompt}
                 </p>
               )}
               
               {/* Show the response */}
-              <p className="text-[#2D2B3E] text-base mb-4 whitespace-pre-wrap">
+              <p className="type-body mb-4 whitespace-pre-wrap text-[var(--text-strong-alt)]">
                 {todayEntry.response}
               </p>
               
@@ -488,7 +496,7 @@ export default function JournalScreen({
           return entryDate !== getTodayDateString() && !e.isWeeklyPrompt;
         }).length > 0 && (
           <div>
-            <h3 className="text-xs tracking-widest text-gray-400 mb-4 uppercase">Past Entries</h3>
+            <h3 className="type-label mb-4 uppercase tracking-widest text-gray-400">Past Entries</h3>
             
             <div className="space-y-3">
               {journalEntries
@@ -509,7 +517,7 @@ export default function JournalScreen({
                       transition={{ type: "spring", stiffness: 300 }}
                     >
                       <div className="flex items-start justify-between mb-3">
-                        <span className="text-sm text-gray-400">
+                        <span className="type-caption text-gray-400">
                           {new Date(entry.createdAt).toLocaleDateString('en-US', {
                             month: 'long',
                             day: 'numeric',
@@ -526,13 +534,13 @@ export default function JournalScreen({
                       
                       {/* Show the prompt if it exists */}
                       {entry.prompt && (
-                        <p className="font-serif text-base text-[#8B86A3] italic mb-2">
+                        <p className="type-body mb-2 italic text-[var(--text-caption-2)]">
                           {entry.prompt}
                         </p>
                       )}
                       
                       {/* Show the response - truncated or full based on expanded state */}
-                      <p className={`text-[#2D2B3E] text-base whitespace-pre-wrap ${!isExpanded ? 'line-clamp-2' : ''}`}>
+                      <p className={`type-body whitespace-pre-wrap text-[var(--text-strong-alt)] ${!isExpanded ? 'line-clamp-2' : ''}`}>
                         {entry.response}
                       </p>
                       

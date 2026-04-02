@@ -9,7 +9,10 @@ import SettingsScreen from './components/SettingsScreen';
 import NavigationBar from './components/NavigationBar';
 import LoginFlow from './components/LoginFlow';
 import LoadingScreen from './components/LoadingScreen';
+import CanopyScreenBackground from './components/CanopyScreenBackground';
 import OnboardingFlow from './components/OnboardingFlow';
+import FocusTaskScreen from './components/FocusTaskScreen';
+import type { CanopyPriorityTag } from './lib/canopyPriorityTags';
 import { getSupabaseClient } from './utils/supabase/client';
 import { taskApi, progressApi, settingsApi } from './utils/api';
 
@@ -144,11 +147,22 @@ export default function App() {
     }
   });
   const [focusModeOn, setFocusModeOn] = useState<boolean>(true);
+  const [focusSession, setFocusSession] = useState<{
+    todo: Todo;
+    priorityTag?: CanopyPriorityTag;
+  } | null>(null);
   const [bonusVersion, setBonusVersion] = useState(0);
 
   const [gameSettings, setGameSettings] = useState<GameSettings>({
     animationType: 'sparkles',
   });
+
+  const sharedBackgroundVariant =
+    activeScreen === 'game'
+      ? 'garden'
+      : activeScreen === 'journal'
+        ? 'journal'
+        : 'default';
 
   const supabase = getSupabaseClient();
   const hasInitializedProgressPersistence = useRef(false);
@@ -1318,11 +1332,14 @@ export default function App() {
   // Show loading screen while checking authentication
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[#E0DCF0]">
-        <div className="w-64 space-y-3">
-          <div className="h-8 rounded-2xl bg-white/60 animate-pulse" />
-          <div className="h-24 rounded-3xl bg-white/55 animate-pulse" />
-          <div className="h-12 rounded-full bg-white/65 animate-pulse" />
+      <div className="relative min-h-[100dvh] bg-[#FAFAFA]">
+        <CanopyScreenBackground variant="default" />
+        <div className="relative z-10 flex min-h-[100dvh] items-center justify-center">
+          <div className="w-64 space-y-3">
+            <div className="h-8 rounded-2xl bg-white/60 animate-pulse" />
+            <div className="h-24 rounded-3xl bg-white/55 animate-pulse" />
+            <div className="h-12 rounded-full bg-white/65 animate-pulse" />
+          </div>
         </div>
       </div>
     );
@@ -1346,13 +1363,13 @@ export default function App() {
 
   return (
     <div
-      className="flex flex-col relative bg-gradient-to-br from-blue-50 via-purple-50 to-pink-50"
+      className="relative flex flex-col bg-[#FAFAFA]"
       style={{
         minHeight: '100dvh',
-        height: '100dvh',
         paddingTop: 'max(env(safe-area-inset-top), 50px)',
       }}
     >
+      <CanopyScreenBackground variant={sharedBackgroundVariant} />
       {focusModeOn && (
         <motion.div
           aria-hidden="true"
@@ -1406,7 +1423,7 @@ export default function App() {
       <motion.div 
         className="flex-1 relative z-10 min-h-0"
         style={{
-          paddingBottom: `calc(5rem + env(safe-area-inset-bottom))`
+          paddingBottom: `calc(6rem + env(safe-area-inset-bottom))`
         }}
         key={activeScreen}
         initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
@@ -1421,6 +1438,7 @@ export default function App() {
             onEditTodo={editTodo}
             onReorderTodos={reorderTodos}
             onDeleteTodo={deleteTodo}
+            onOpenFocusTask={(todo, priorityTag) => setFocusSession({ todo, priorityTag })}
           />
         )}
         
@@ -1462,6 +1480,22 @@ export default function App() {
           />
         )}
       </motion.div>
+
+      {focusSession && (
+        <FocusTaskScreen
+          todo={focusSession.todo}
+          priorityTag={focusSession.priorityTag}
+          onClose={() => setFocusSession(null)}
+          onSessionFinish={({ totalSecondsFocused, markTaskComplete }) => {
+            addXP(Math.floor(totalSecondsFocused / 60));
+            if (markTaskComplete && !focusSession.todo.completed) {
+              toggleTodo(focusSession.todo.id);
+            }
+            window.dispatchEvent(new Event('canopy-focus-session-celebrate'));
+            setFocusSession(null);
+          }}
+        />
+      )}
     </div>
   );
 }

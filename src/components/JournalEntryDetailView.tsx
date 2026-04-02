@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, PanInfo } from 'motion/react';
 import { ArrowLeft, ChevronLeft, ChevronRight } from 'lucide-react';
 import type { JournalEntry } from '../App';
+import CanopyScreenBackground from './CanopyScreenBackground';
 
 interface JournalEntryDetailViewProps {
   entries: JournalEntry[];
@@ -92,34 +93,38 @@ export default function JournalEntryDetailView({
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-b from-[#EBE8F4] to-[#E0DCF0] z-50 flex flex-col">
+    <div className="fixed inset-0 z-50 flex flex-col bg-[var(--bg-screen-auth)] overflow-y-auto overscroll-y-contain">
+      <CanopyScreenBackground variant="journal" />
       {/* Header */}
-      <div className="flex-shrink-0 px-4 pt-6 pb-4">
+      <div className="relative z-10 flex-shrink-0 px-4 pt-6 pb-4">
         <div className="flex items-center justify-between mb-4">
           <motion.button
+            type="button"
             onClick={onClose}
-            className="flex items-center gap-2 text-[#2D2B3E] hover:text-[#8B86A3] transition-colors"
-            whileTap={{ scale: 0.95 }}
+            className="flex items-center gap-2 text-[var(--text-strong-alt)] transition-all duration-150 ease-out hover:text-[var(--text-caption-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-screen-auth)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+            whileTap={{ scale: 0.97 }}
           >
             <ArrowLeft className="w-5 h-5" />
-            <span className="font-light">Back</span>
+            <span className="type-body">Back</span>
           </motion.button>
 
           <div className="flex items-center gap-4">
             <button
+              type="button"
               onClick={navigatePrevious}
               disabled={currentIndex === 0}
-              className="text-[#2D2B3E] hover:text-[#8B86A3] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="text-[var(--text-strong-alt)] transition-all duration-150 ease-out hover:text-[var(--text-caption-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-screen-auth)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
-            <span className="text-xs text-[#8B86A3]">
+            <span className="type-label text-[var(--text-caption-2)]">
               {currentIndex + 1} / {sortedEntries.length}
             </span>
             <button
+              type="button"
               onClick={navigateNext}
               disabled={currentIndex === sortedEntries.length - 1}
-              className="text-[#2D2B3E] hover:text-[#8B86A3] disabled:opacity-30 disabled:cursor-not-allowed transition-colors"
+              className="text-[var(--text-strong-alt)] transition-all duration-150 ease-out hover:text-[var(--text-caption-2)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-screen-auth)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
             >
               <ChevronRight className="w-6 h-6" />
             </button>
@@ -128,13 +133,15 @@ export default function JournalEntryDetailView({
 
         {/* Date Header */}
         <div className="text-center">
-          <h1 className="font-serif text-3xl text-[#2D2B3E] mb-1">{formattedDate}</h1>
-          <p className="text-sm text-[#8B86A3] font-light">{formattedTime}</p>
+          <h1 className="type-headline mb-1 text-[var(--text-strong-alt)]">{formattedDate}</h1>
+          <p className="type-caption text-[var(--text-caption-2)]">{formattedTime}</p>
         </div>
       </div>
 
       {/* Entry Content - Swipeable */}
-      <div className="flex-1 overflow-hidden px-4 pb-6">
+      <div
+        className="relative z-10 flex-1 overflow-hidden px-4 pb-[max(1.5rem,env(safe-area-inset-bottom))]"
+      >
         <AnimatePresence mode="wait" custom={direction} initial={false}>
           <motion.div
             key={currentEntry.id}
@@ -167,7 +174,7 @@ export default function JournalEntryDetailView({
                           : 'bg-purple-400'
                       }`}
                     />
-                    <span className="text-sm text-[#2D2B3E] capitalize font-light">
+                    <span className="type-caption capitalize text-[var(--text-strong-alt)]">
                       {currentEntry.mood}
                     </span>
                   </div>
@@ -176,11 +183,11 @@ export default function JournalEntryDetailView({
 
               {/* Prompt */}
               {currentEntry.prompt && (
-                <div className="mb-4 pb-4 border-b border-[#EBE8F4]">
-                  <p className="text-sm text-[#8B86A3] mb-1 uppercase tracking-wider font-light">
+                <div className="mb-4 border-b border-[#EBE8F4] pb-4">
+                  <p className="type-label mb-1 uppercase tracking-wider text-[var(--text-caption-2)]">
                     Prompt
                   </p>
-                  <p className="text-[#2D2B3E] font-serif text-lg italic">
+                  <p className="type-body italic text-[var(--text-strong-alt)]">
                     {currentEntry.prompt}
                   </p>
                 </div>
@@ -202,10 +209,10 @@ export default function JournalEntryDetailView({
 
               {/* Response */}
               <div>
-                <p className="text-sm text-[#8B86A3] mb-2 uppercase tracking-wider font-light">
+                <p className="type-label mb-2 uppercase tracking-wider text-[var(--text-caption-2)]">
                   {currentEntry.prompt ? 'Your reflection' : 'Entry'}
                 </p>
-                <p className="text-[#2D2B3E] leading-relaxed font-light whitespace-pre-wrap">
+                <p className="type-body whitespace-pre-wrap text-[var(--text-strong-alt)]">
                   {currentEntry.response}
                 </p>
               </div>
@@ -213,7 +220,7 @@ export default function JournalEntryDetailView({
               {/* Weekly prompt indicator */}
               {currentEntry.isWeeklyPrompt && (
                 <div className="mt-6 pt-4 border-t border-[#EBE8F4]">
-                  <span className="inline-flex items-center gap-2 px-3 py-1 bg-gradient-to-r from-[#A8C5DA] to-[#8B86A3] text-white rounded-full text-xs font-light">
+                  <span className="type-caption inline-flex items-center gap-2 rounded-full bg-gradient-to-r from-[#A8C5DA] to-[#8B86A3] px-3 py-1 text-white">
                     ✨ Weekly Reflection
                   </span>
                 </div>
@@ -221,7 +228,7 @@ export default function JournalEntryDetailView({
             </div>
 
             {/* Swipe hint */}
-            <div className="text-center mt-4 text-xs text-[#8B86A3]">
+            <div className="type-caption mt-4 text-center text-[#8B86A3]">
               Swipe left or right to navigate entries
             </div>
           </motion.div>

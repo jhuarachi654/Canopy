@@ -48,13 +48,13 @@ export default function NavigationBar({
 
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 flex items-center justify-center z-50"
+      className="absolute bottom-0 left-0 right-0 z-50 flex items-center justify-center"
       style={{
-        paddingBottom: 'calc(1.5rem + env(safe-area-inset-bottom))',
-        paddingTop: '1.5rem',
+        paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))',
+        paddingTop: '1rem',
       }}
     >
-      <div className="bg-white/90 backdrop-blur-lg rounded-full shadow-lg px-5 py-3 w-[calc(100%-2rem)] max-w-[min(42rem,calc(100%-2rem))] flex items-center justify-between">
+      <div className="flex w-[calc(100%-2rem)] max-w-[min(42rem,calc(100%-2rem))] items-center justify-between rounded-[var(--radius-full)] bg-[var(--surface-base-90)] px-[var(--space-5)] py-[var(--space-3)] shadow-lg backdrop-blur-lg">
         {navItems.map((item) => {
           const isActive = activeScreen === item.id;
           const Icon = item.icon;
@@ -62,19 +62,20 @@ export default function NavigationBar({
           return (
             <button
               key={item.id}
+              type="button"
               onClick={() => onScreenChange(item.id)}
-              className={`relative flex flex-col items-center justify-center gap-1 transition-all duration-200 ${
+              className={`relative flex flex-col items-center justify-center gap-[var(--space-1)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base-90)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
                 isActive ? 'scale-105' : 'scale-100'
               }`}
             >
               {/* Icon Container */}
               <motion.div
-                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 ${
+                className={`flex h-12 w-12 items-center justify-center rounded-[var(--radius-full)] transition-all duration-150 ease-out ${
                   isActive
-                    ? 'bg-gray-900 text-white'
-                    : 'bg-transparent text-gray-400 hover:text-gray-600'
+                    ? 'bg-[var(--text-strong-alt)] text-white'
+                    : 'bg-transparent text-[var(--text-caption-2)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body-muted)]'
                 }`}
-                whileTap={prefersReducedMotion ? {} : { scale: 0.96 }}
+                whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
                 animate={
                   prefersReducedMotion
                     ? { opacity: isActive ? 1 : 0.95 }
@@ -91,8 +92,8 @@ export default function NavigationBar({
 
               {/* Label */}
               <span
-                className={`text-xs font-medium transition-colors duration-200 ${
-                  isActive ? 'text-gray-900' : 'text-gray-400'
+                className={`text-xs font-medium transition-colors duration-150 ease-out ${
+                  isActive ? 'text-[var(--text-strong-alt)]' : 'text-[var(--text-caption-2)]'
                 }`}
               >
                 {item.label}

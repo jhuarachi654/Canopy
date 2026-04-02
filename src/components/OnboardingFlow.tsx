@@ -8,6 +8,10 @@ import quietFernImg from 'figma:asset/7438a9d659ebf123bfbcca1916fe079babb35132.p
 import wildCloverImg from 'figma:asset/4c899badb6a576e6df75d3cb576969dd9e07298d.png';
 import roseMossImg from 'figma:asset/34ec7cd771dafa77769204ece804cb31dcd57a39.png';
 import blueSageImg from 'figma:asset/98636990ae62d87883607d3992be74e4cfde2eee.png';
+import CanopyScreenBackground from './CanopyScreenBackground';
+
+const FOCUS_MODE_STORAGE_KEY = 'lifelevel-focus-mode';
+const FOCUS_MODE_UPDATED_EVENT = 'canopy-focus-mode-updated';
 
 interface OnboardingFlowProps {
   onComplete: () => void;
@@ -53,8 +57,9 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       // Save preferences to localStorage
       localStorage.setItem('lifelevel-user-name', userName);
       localStorage.setItem('lifelevel-user-feeling', userFeeling);
-      localStorage.setItem('lifelevel-focus-mode', JSON.stringify(focusMode));
+      localStorage.setItem(FOCUS_MODE_STORAGE_KEY, JSON.stringify(focusMode));
       localStorage.setItem('lifelevel-selected-plant', selectedPlant);
+      window.dispatchEvent(new Event(FOCUS_MODE_UPDATED_EVENT));
       onComplete();
     } else {
       setCurrentStep(currentStep + 1);
@@ -80,66 +85,107 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   return (
     <div
-      className="absolute inset-0 bg-[#eef0f7] flex items-center justify-center z-[100] p-4 overflow-y-auto"
-      style={{ paddingTop: 'max(env(safe-area-inset-top), 64px)' }}
+      className={`absolute inset-0 z-[100] flex min-h-[100dvh] flex-col bg-[var(--bg-screen-auth)] overflow-y-auto overscroll-y-contain`}
+      style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}
     >
-      <div className="w-full max-w-md my-auto">
-        <div className="flex items-center justify-between mb-3">
+      <CanopyScreenBackground
+        variant={
+          currentStep === 0
+            ? 'onboarding-name'
+            : currentStep === 1
+              ? 'onboarding-question'
+              : currentStep === 2
+                ? 'onboarding-focus'
+                : 'onboarding-plant'
+        }
+      />
+
+      {/* Content: max 393px (frame width), centered on large viewports */}
+      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[min(393px,100%)] flex-1 flex-col px-[var(--space-6)] pb-[var(--space-8)] sm:px-[var(--space-10)]">
+        <div className="flex h-11 shrink-0 items-center justify-between">
           {currentStep > 0 ? (
             <button
+              type="button"
               onClick={handleBack}
-              className="w-9 h-9 rounded-full bg-white border border-[#E8E4F3] flex items-center justify-center text-[#1a1a2e]"
+              className="flex h-9 w-9 items-center justify-center rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-[var(--text-strong)] transition-colors duration-200 hover:bg-[var(--surface-hover-soft)] active:bg-[var(--surface-panel-toggle)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2"
               aria-label="Back"
             >
-              <ChevronLeft className="w-4 h-4" />
+              <ChevronLeft className="h-4 w-4" />
             </button>
           ) : (
-            <div className="w-9 h-9" />
+            <span className="h-9 w-9" aria-hidden="true" />
           )}
-          <div className="w-9 h-9" />
+          <span className="h-9 w-9" aria-hidden="true" />
         </div>
 
-        <div className="min-h-[560px] flex flex-col justify-center">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
-              transition={{ duration: 0.3 }}
-            >
-            {/* Step 1: Name */}
+        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
+          {/* Step 0: reference places hero ~22–28% below top (upper-mid); other steps: centered in remaining space */}
+          <div
+            className={
+              currentStep === 0
+                ? 'flex w-full min-h-0 flex-col pb-[var(--space-5)] pt-[clamp(var(--space-3),min(14dvh,4rem),5rem)]'
+                : currentStep === 3
+                  ? 'my-auto flex w-full min-h-0 flex-col py-[var(--space-2)]'
+                  : 'my-auto flex w-full min-h-0 flex-col py-[var(--space-6)]'
+            }
+          >
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentStep}
+                className={`flex w-full flex-col ${currentStep === 3 ? '' : 'min-h-0'}`}
+                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
+                transition={{ duration: 0.3 }}
+              >
+            {/* Step 1: Name — Canopy-3 */}
             {currentStep === 0 && (
-              <div className="px-6">
-                <div className="text-left mb-6">
-                  <div className="w-8 h-8 mb-2">
+              <div className="flex w-full flex-col items-stretch text-left">
+                <div className="mb-[var(--space-3)]">
+                  <div className="mb-[var(--space-3)] h-8 w-8">
                     <svg className="block size-full" fill="none" viewBox="0 0 780.771 775.61">
-                      <path d={svgPaths.p2ff87f00} fill="#2D2B3E" />
+                      <path d={svgPaths.p2ff87f00} fill="var(--text-strong)" />
                     </svg>
                   </div>
-                  <h1 className="font-serif text-6xl text-[#1a1a2e] mb-4">
+                  <h1 className="type-display tracking-tight text-[var(--text-strong)]">
                     Can<span className="italic">opy</span>
                   </h1>
                 </div>
 
-                <h2 className="font-serif italic text-4xl text-[#1a1a2e] mb-2">What should we call you?</h2>
-                <p className="text-[#8f95a3] text-sm mb-6">Just two quick things, then you&apos;re in.</p>
+                <h2 className="type-headline mb-[var(--space-3)] max-w-[20ch] italic text-[var(--text-strong)]">
+                  What should we call you?
+                </h2>
+                <p className="type-body mb-[var(--space-8)] italic text-[var(--text-caption-3)]">
+                  Just two quick things, then you&apos;re in.
+                </p>
 
-                <div className="bg-white rounded-3xl p-6 mb-6 border border-[#E8E4F3]">
-                  <label className="block text-[11px] tracking-widest uppercase text-[#8f95a3] mb-3">YOUR NAME</label>
+                <div className="mb-[var(--space-4)] w-full rounded-[var(--radius-lg)] bg-[var(--surface-base)] px-[var(--space-6)] pb-[var(--space-5)] pt-[var(--space-6)] shadow-sm">
+                  <label
+                    htmlFor="onboard-name"
+                    className="type-label mb-[var(--space-3)] block uppercase tracking-wider text-[var(--text-caption-3)]"
+                  >
+                    YOUR NAME
+                  </label>
                   <input
+                    id="onboard-name"
                     type="text"
                     value={userName}
                     onChange={(e) => setUserName(e.target.value)}
                     placeholder="Name"
-                    className="w-full text-lg text-[#1a1a2e] bg-transparent border-0 outline-none placeholder:text-[#c1c5cf]"
+                    className="type-body w-full border-0 border-b border-[var(--border-soft-panel)] bg-transparent p-0 pb-[var(--space-2)] text-[var(--text-strong)] outline-none transition-all duration-150 ease-out placeholder:text-[var(--text-placeholder)] focus:border-[var(--border-soft)] focus:shadow-none"
+                    autoFocus
                   />
                 </div>
 
                 <button
+                  type="button"
                   onClick={handleNext}
                   disabled={!canContinue}
-                  className="w-full py-4 bg-[#696A8E] hover:bg-[#5A5B78] disabled:bg-gray-300 text-white rounded-full font-medium transition-colors"
+                  className={`type-body h-14 w-full rounded-[var(--radius-full)] text-center text-white shadow-none transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:bg-[var(--surface-panel-track-neutral)] disabled:text-white/80 disabled:hover:bg-[var(--surface-panel-track-neutral)] ${
+                    canContinue
+                      ? 'bg-[var(--accent-teal)] hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)]'
+                      : 'bg-[var(--surface-panel-track-disabled)]'
+                  } ${prefersReducedMotion ? '' : 'active:scale-[0.98] disabled:active:scale-100'}`}
                 >
                   Continue
                 </button>
@@ -148,25 +194,30 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
             {/* Step 2: Mood */}
             {currentStep === 1 && (
-              <div className="px-6">
-                <h2 className="font-serif italic text-4xl text-[#1a1a2e] mb-2">How&apos;s your relationship with your to-do list?</h2>
-                <p className="text-[#8f95a3] text-sm mb-6">This helps us set up your experience.</p>
+              <div className="flex w-full flex-col items-stretch pt-[var(--space-2)] text-left">
+                <h2 className="type-headline mb-[var(--space-2)] italic text-[var(--text-strong)]">
+                  How&apos;s your relationship with your to-do list?
+                </h2>
+                <p className="type-body mb-[var(--space-6)] italic text-[var(--text-caption-6)]">
+                  This helps us set up your experience.
+                </p>
 
-                <div className="space-y-3 mb-6">
+                <div className="mb-[var(--space-6)] space-y-[var(--space-3)]">
                   {['It stresses me out / I avoid it', 'It keeps me on track', "It's complicated"].map((feeling) => (
                     <button
+                      type="button"
                       key={feeling}
                       onClick={() => setUserFeeling(feeling)}
-                      className={`w-full py-4 px-4 rounded-2xl text-left transition-colors flex items-center justify-between ${
+                      className={`flex w-full items-center justify-between rounded-[var(--radius-lg)] px-[var(--space-4)] py-[var(--space-4)] text-left transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 ${
                         userFeeling === feeling
-                          ? 'bg-[#1a1a2e] text-white'
-                          : 'bg-white text-[#1a1a2e] border border-[#E8E4F3]'
-                      }`}
+                          ? 'bg-[var(--text-strong)] text-white active:bg-[var(--text-strong-active)] active:brightness-95'
+                          : 'border border-[var(--border-soft)] bg-[var(--surface-base)] text-[var(--text-strong)] active:bg-[var(--surface-hover-soft-alt)] active:brightness-[0.98]'
+                      } ${prefersReducedMotion ? '' : 'active:scale-[0.99]'}`}
                     >
                       <span>{feeling}</span>
                       {userFeeling === feeling && (
-                        <span className="w-5 h-5 rounded-full bg-[#1abf8f] flex items-center justify-center">
-                          <Check className="w-3 h-3 text-white" />
+                        <span className="flex h-5 w-5 items-center justify-center rounded-[var(--radius-full)] bg-[var(--accent-teal)]">
+                          <Check className="h-3 w-3 text-white" />
                         </span>
                       )}
                     </button>
@@ -174,9 +225,14 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 </div>
 
                 <button
+                  type="button"
                   onClick={handleNext}
                   disabled={!canContinue}
-                  className="w-full py-4 bg-[#696A8E] hover:bg-[#5A5B78] disabled:bg-gray-300 text-white rounded-full font-medium transition-colors"
+                  className={`type-body h-14 w-full rounded-[var(--radius-full)] text-center text-white shadow-none transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:bg-[var(--surface-panel-track-neutral)] disabled:text-white/80 disabled:hover:bg-[var(--surface-panel-track-neutral)] ${
+                    canContinue
+                      ? 'bg-[var(--accent-teal)] hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)]'
+                      : 'bg-[var(--surface-panel-track-disabled)]'
+                  } ${prefersReducedMotion ? '' : 'active:scale-[0.98]'}`}
                 >
                   Continue
                 </button>
@@ -185,40 +241,51 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
             {/* Step 3: Focus mode */}
             {currentStep === 2 && (
-              <div className="px-6">
-                <h2 className="font-serif italic text-4xl text-[#1a1a2e] mb-2">One last thing.</h2>
-                <p className="text-[#8f95a3] text-sm mb-6">You can always change this later.</p>
+              <div className="flex w-full flex-col items-stretch pt-[var(--space-2)] text-left">
+                <h2 className="type-headline mb-[var(--space-2)] italic text-[var(--text-strong)]">One last thing.</h2>
+                <p className="type-body mb-[var(--space-6)] italic text-[var(--text-caption-6)]">
+                  You can always change this later.
+                </p>
 
-                <div className="bg-white rounded-3xl p-6 mb-6 border border-[#E8E4F3]">
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex-1">
-                      <h3 className="text-base text-[#1a1a2e] mb-1">Focus mode</h3>
-                      <p className="text-sm text-[#8f95a3] leading-relaxed">
+                <div className="mb-[var(--space-6)] rounded-[var(--radius-lg)] border border-[var(--border-soft)] bg-[var(--surface-base)] p-[var(--space-6)]">
+                  <div className="mb-[var(--space-3)] flex items-start justify-between">
+                    <div className="min-w-0 flex-1">
+                      <h3 className="type-body mb-1 text-[var(--text-strong)]">Focus mode</h3>
+                      <p className="type-caption text-[var(--text-caption-6)]">
                         Keeps your list to 3 tasks. Reduces decision fatigue.
                       </p>
                     </div>
-                    <button
-                      onClick={() => setFocusMode(!focusMode)}
-                      className={`relative w-14 h-8 rounded-full transition-colors ml-4 flex-shrink-0 ${
-                        focusMode ? 'bg-[#1abf8f]' : 'bg-gray-300'
-                      }`}
+                    <label
+                      className="relative ml-[var(--space-4)] flex h-11 w-16 shrink-0 cursor-pointer items-center"
                       aria-label="Toggle focus mode"
                     >
-                      <motion.div
-                        className="absolute top-1 w-6 h-6 bg-white rounded-full shadow-sm"
-                        animate={{ left: focusMode ? '28px' : '4px' }}
-                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                      <input
+                        type="checkbox"
+                        checked={focusMode}
+                        onChange={(e) => setFocusMode(e.target.checked)}
+                        className="peer sr-only"
                       />
-                    </button>
+                      <span
+                        className="absolute inset-0 rounded-[var(--radius-full)] bg-[var(--surface-panel-track-disabled)] transition-colors duration-150 ease-out peer-checked:bg-[var(--accent-teal)] peer-focus-visible:ring-2 peer-focus-visible:ring-[color:var(--shadow-focus-ring-dark)] peer-focus-visible:ring-offset-2 peer-focus-visible:ring-offset-white"
+                        aria-hidden="true"
+                      />
+                      <motion.span
+                        className="absolute left-1 top-1 h-9 w-9 rounded-[var(--radius-full)] bg-white shadow-sm"
+                        animate={{ x: focusMode ? 20 : 0 }}
+                        transition={{ type: 'spring', stiffness: 500, damping: 30 }}
+                        aria-hidden="true"
+                      />
+                    </label>
                   </div>
-                  <div className="border-t border-[#EFEAF8] pt-3">
-                    <p className="text-sm text-[#1abf8f]">Recommended based on your answer ↑</p>
+                  <div className="border-t border-[var(--border-soft-panel)] pt-3">
+                    <p className="type-caption text-[var(--accent-teal)]">Recommended based on your answer ↑</p>
                   </div>
                 </div>
 
                 <button
+                  type="button"
                   onClick={handleNext}
-                  className="w-full py-4 bg-[#696A8E] hover:bg-[#5A5B78] text-white rounded-full font-medium transition-colors"
+                  className={`type-body h-14 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-center text-white shadow-none transition-colors duration-200 hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white ${prefersReducedMotion ? '' : 'active:scale-[0.98]'}`}
                 >
                   Continue
                 </button>
@@ -227,67 +294,81 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
             {/* Step 4: Plant Selection */}
             {currentStep === 3 && (
-              <div className="px-6">
-                <h2 className="font-serif text-3xl text-gray-900 mb-2 italic">
+              <div className="flex min-h-0 w-full flex-col items-stretch justify-center pb-[var(--space-1)] pt-[var(--space-1)] text-left">
+                <h2 className="type-headline mb-[var(--space-1)] italic text-[var(--text-strong-alt)]">
                   Pick your first plant
                 </h2>
-                <p className="text-gray-400 text-sm mb-5">
-                  It&apos;ll grow as you show up. No pressure.
+                <p className="type-caption mb-[var(--space-3)] italic text-[var(--text-caption-7)]">
+                  Your collection will grow as you show up.
                 </p>
 
-                <div className="grid grid-cols-2 gap-3 mb-5">
-                  {plants.map((plant) => (
+                <div className="mb-[var(--space-4)] grid grid-cols-2 gap-[var(--space-2)] overflow-visible p-[var(--space-1)] [grid-auto-rows:minmax(0,1fr)]">
+                  {plants.map((plant) => {
+                    const isSelected = selectedPlant === plant.id;
+                    const hasDifferentSelection = selectedPlant !== plant.id;
+
+                    return (
                     <motion.button
+                      type="button"
                       key={plant.id}
                       onClick={() => setSelectedPlant(plant.id)}
-                      className={`relative bg-white/60 backdrop-blur-sm rounded-3xl p-4 transition-all ${
-                        selectedPlant === plant.id
-                          ? 'ring-2 ring-teal-400'
-                          : 'hover:bg-white/80'
-                      }`}
-                      animate={
-                        selectedPlant === plant.id && !prefersReducedMotion
-                          ? { scale: [1, 1.03, 1] }
-                          : { scale: 1 }
-                      }
-                      transition={{ duration: 0.3 }}
+                      className={`relative self-stretch overflow-visible rounded-[var(--radius-lg)] border bg-[var(--surface-base-60)] px-[var(--space-3)] pb-[var(--space-3)] pt-[var(--space-3)] text-left backdrop-blur-[4px] transition-all duration-150 ease-out ${
+                        isSelected
+                          ? 'border-[var(--accent-select-outline)] shadow-[0_0_0_1px_var(--accent-select-outline),var(--shadow-plant-card)]'
+                          : 'border-[var(--border-soft)] shadow-[var(--shadow-plant-card)] hover:border-[var(--accent-select-outline)] hover:bg-[var(--surface-base-75)] hover:shadow-[0_0_0_1px_var(--accent-select-outline),var(--shadow-plant-card)]'
+                      } ${hasDifferentSelection ? 'opacity-85' : 'opacity-100'}`}
+                      animate={{ scale: isSelected ? 1.02 : 1, opacity: hasDifferentSelection ? 0.85 : 1 }}
+                      whileHover={prefersReducedMotion ? {} : { scale: isSelected ? 1.02 : 1.02 }}
+                      transition={{ duration: 0.15, ease: 'easeOut' }}
                       whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
                     >
-                      <div className="flex justify-center mb-3">
+                      {isSelected ? (
+                        <span className="absolute right-[var(--space-3)] top-[var(--space-3)] flex h-6 w-6 items-center justify-center rounded-[var(--radius-full)] bg-[var(--accent-select-outline)] text-white shadow-sm">
+                          <Check className="h-3.5 w-3.5" />
+                        </span>
+                      ) : null}
+                      <div className="mb-[var(--space-2)] flex min-h-[52px] items-center justify-center overflow-visible">
                         <img
                           src={plant.image}
                           alt={plant.name}
-                          className="pixelated w-14 h-14 object-contain"
-                          style={{ imageRendering: 'pixelated' }}
+                          className="pixelated h-12 w-12 shrink-0 object-contain"
+                          style={{ imageRendering: 'pixelated', overflow: 'visible' }}
                         />
                       </div>
 
-                      <p className="font-serif text-base text-gray-900 mb-1 italic">
+                      <p className="type-body mb-[var(--space-1)] text-center italic text-[var(--text-strong-alt)]">
                         {plant.name}
                       </p>
-                      <p className="text-[11px] text-gray-400">
+                      <p className="type-caption text-center text-[var(--text-caption-7)]">
                         {plant.subtitle}
                       </p>
                     </motion.button>
-                  ))}
+                    );
+                  })}
                 </div>
                 <button
+                  type="button"
                   onClick={handleNext}
-                  className="w-full py-4 bg-[#1abf8f] hover:bg-[#14a87d] text-white rounded-full font-medium transition-colors"
+                  className={`type-body mt-1 h-12 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-center text-white shadow-none transition-colors duration-200 hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white ${prefersReducedMotion ? '' : 'active:scale-[0.98]'}`}
                 >
                   Start growing
                 </button>
               </div>
             )}
-            </motion.div>
-          </AnimatePresence>
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </div>
 
-        <div className="flex justify-center gap-2 mt-6">
+        <div
+          className={`flex shrink-0 justify-center gap-[var(--space-2)] pt-[var(--space-3)] ${currentStep === 3 ? 'pb-[max(env(safe-area-inset-bottom),var(--space-4))]' : 'pb-[max(env(safe-area-inset-bottom),min(8vh,3.25rem))]'}`}
+          role="status"
+          aria-label={`Step ${currentStep + 1} of 4`}
+        >
           {[0, 1, 2, 3].map((step) => (
             <div
               key={step}
-              className={`h-1.5 w-1.5 rounded-full ${currentStep === step ? 'bg-[#1a1a2e]' : 'bg-gray-300'}`}
+              className={`h-1.5 w-1.5 rounded-[var(--radius-full)] ${currentStep === step ? 'bg-[var(--text-strong)]' : 'bg-[var(--surface-panel-track-disabled)]'}`}
             />
           ))}
         </div>

@@ -1,8 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { Plus, Check, X, Pencil, Target } from 'lucide-react';
-import { toast } from 'sonner@2.0.3';
+import { Plus, Check, X, Target, Timer, MoreHorizontal } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { toast } from 'sonner';
 import type { Todo } from '../App';
+import type { CanopyPriorityTag } from '../lib/canopyPriorityTags';
+
+const FOCUS_MODE_STORAGE_KEY = 'lifelevel-focus-mode';
+const FOCUS_MODE_UPDATED_EVENT = 'canopy-focus-mode-updated';
 
 interface TodoListScreenProps {
   todos: Todo[];
@@ -11,6 +16,7 @@ interface TodoListScreenProps {
   onEditTodo: (id: string, newText: string) => void;
   onReorderTodos: (dragIndex: number, hoverIndex: number) => void;
   onDeleteTodo: (id: string) => void;
+  onOpenFocusTask: (todo: Todo, priorityTag?: CanopyPriorityTag) => void;
 }
 
 export default function TodoListScreen({
@@ -20,68 +26,185 @@ export default function TodoListScreen({
   onEditTodo,
   onReorderTodos,
   onDeleteTodo,
+  onOpenFocusTask,
 }: TodoListScreenProps) {
   const prefersReducedMotion = useReducedMotion();
-  const visibleTodos = todos.filter(todo => !todo.destroyedAt);
+  const visibleTodos = todos.filter((todo) => !todo.destroyedAt);
   const [activeFilter, setActiveFilter] = useState<'todo' | 'completed'>('todo');
   const [newTodoText, setNewTodoText] = useState('');
-  const [editingId, setEditingId] = useState<string | null>(null);
-  const [editingText, setEditingText] = useState('');
+  const [showCreateSheet, setShowCreateSheet] = useState(false);
+  const [newTodoNotes, setNewTodoNotes] = useState('');
+  const [newTodoDueDate, setNewTodoDueDate] = useState('');
+  const [newTodoDueTime, setNewTodoDueTime] = useState('');
+  const [pendingDraft, setPendingDraft] = useState<{
+    title: string;
+    notes: string;
+    dueDate: string;
+  } | null>(null);
+  const [editingTodoId, setEditingTodoId] = useState<string | null>(null);
   const [completingId, setCompletingId] = useState<string | null>(null);
   const [xpBurstTaskId, setXpBurstTaskId] = useState<string | null>(null);
-  const [categoryByTask, setCategoryByTask] = useState<Record<string, 'home' | 'school' | 'work' | 'other' | undefined>>({});
-  const [priorityByTask, setPriorityByTask] = useState<Record<string, 'low' | 'medium' | 'high' | undefined>>({});
-  const [openTagMenuFor, setOpenTagMenuFor] = useState<string | null>(null);
+  const [notesByTask, setNotesByTask] = useState<Record<string, string | undefined>>({});
+  const [dueDateByTask, setDueDateByTask] = useState<Record<string, string | undefined>>({});
+  const [focusPromptFor, setFocusPromptFor] = useState<string | null>(null);
+  const [focusSelectionIds, setFocusSelectionIds] = useState<string[]>([]);
+  const [focusSelectionLocked, setFocusSelectionLocked] = useState(false);
+  const [showFocusSelectionOverlay, setShowFocusSelectionOverlay] = useState(false);
+
   const [focusMode, setFocusMode] = useState<boolean>(() => {
     try {
-      const stored = localStorage.getItem('lifelevel-focus-mode');
+      const stored = localStorage.getItem(FOCUS_MODE_STORAGE_KEY);
       return stored ? JSON.parse(stored) : true;
     } catch {
       return true;
     }
   });
 
-  const QUOTES = [
-    { text: 'Start where you are. Use what you have. Do what you can.', source: 'Arthur Ashe' },
-    { text: 'Believe you can and you\'re halfway there.', source: 'Theodore Roosevelt' },
-    { text: 'You are never too old to set another goal or to dream a new dream.', source: 'C. S. Lewis' },
-    { text: 'It always seems impossible until it\'s done.', source: 'Nelson Mandela' },
-    { text: 'Keep your face always toward the sunshine—and shadows will fall behind you.', source: 'Walt Whitman' },
-    { text: 'Do what you can, with what you have, where you are.', source: 'Theodore Roosevelt' },
-    { text: 'Success is the sum of small efforts, repeated day in and day out.', source: 'Robert Collier' },
-    { text: 'Nothing is impossible. The word itself says “I’m possible!”', source: 'Audrey Hepburn' },
-    { text: 'Act as if what you do makes a difference. It does.', source: 'William James' },
-    { text: 'You miss 100% of the shots you don’t take.', source: 'Wayne Gretzky' },
-  ];
-  const today = new Date();
-  const daySeed = Math.floor(Date.UTC(today.getFullYear(), today.getMonth(), today.getDate()) / 86400000);
-  const quoteIndex = daySeed % QUOTES.length;
-  const CATEGORY_OPTIONS: Array<'home' | 'school' | 'work' | 'other'> = ['home', 'school', 'work', 'other'];
-  const PRIORITY_OPTIONS: Array<'low' | 'medium' | 'high'> = ['low', 'medium', 'high'];
+  useEffect(() => {
+    const syncFocusMode = () => {
+      try {
+        const stored = localStorage.getItem(FOCUS_MODE_STORAGE_KEY);
+        setFocusMode(stored ? JSON.parse(stored) : true);
+      } catch {
+        setFocusMode(true);
+      }
+    };
 
-  const filteredTodos = visibleTodos.filter((todo) => {
-    if (activeFilter === 'completed') return todo.completed;
-    return !todo.completed;
-  });
+    window.addEventListener('storage', syncFocusMode);
+    window.addEventListener('focus', syncFocusMode);
+    window.addEventListener(FOCUS_MODE_UPDATED_EVENT, syncFocusMode);
 
-  const getPriorityPillClasses = (value: 'low' | 'medium' | 'high') => {
-    if (value === 'low') return 'bg-[#EEF7F3] text-[#2D6E57]';
-    if (value === 'medium') return 'bg-[#FFF7E6] text-[#9A6A1B]';
-    return 'bg-[#FFEDEE] text-[#A14346]';
+    return () => {
+      window.removeEventListener('storage', syncFocusMode);
+      window.removeEventListener('focus', syncFocusMode);
+      window.removeEventListener(FOCUS_MODE_UPDATED_EVENT, syncFocusMode);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!focusPromptFor) return;
+
+    const handlePointerDown = (event: PointerEvent) => {
+      const target = event.target as HTMLElement | null;
+      if (!target?.closest('[data-focus-session-root="true"]')) {
+        setFocusPromptFor(null);
+      }
+    };
+
+    document.addEventListener('pointerdown', handlePointerDown);
+    return () => document.removeEventListener('pointerdown', handlePointerDown);
+  }, [focusPromptFor]);
+
+  useEffect(() => {
+    if (!focusMode) {
+      setFocusSelectionIds([]);
+      setFocusSelectionLocked(false);
+      setShowFocusSelectionOverlay(false);
+    }
+  }, [focusMode]);
+
+  useEffect(() => {
+    if (!pendingDraft) return;
+    const match = [...visibleTodos]
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+      .find((todo) => todo.text === pendingDraft.title && !dueDateByTask[todo.id] && !notesByTask[todo.id]);
+    if (!match) return;
+    setDueDateByTask((prev) => ({ ...prev, [match.id]: pendingDraft.dueDate || undefined }));
+    if (pendingDraft.notes.trim()) {
+      setNotesByTask((prev) => ({ ...prev, [match.id]: pendingDraft.notes.trim() }));
+    }
+    setPendingDraft(null);
+  }, [pendingDraft, visibleTodos, dueDateByTask, notesByTask]);
+
+  const openCreateSheet = () => {
+    setEditingTodoId(null);
+    setNewTodoText('');
+    setNewTodoNotes('');
+    setNewTodoDueDate('');
+    setNewTodoDueTime('');
+    setShowCreateSheet(true);
   };
 
-  const getCategoryPillClasses = (value: 'home' | 'school' | 'work' | 'other') => {
-    if (value === 'home') return 'bg-[#EEF7F3] text-[#2D6E57]';
-    if (value === 'school') return 'bg-[#EEF2FF] text-[#485AA0]';
-    if (value === 'work') return 'bg-[#FFF3EA] text-[#9A5A2A]';
-    return 'bg-[#F3EEF8] text-[#6B548A]';
+  const openEditSheet = (todo: Todo) => {
+    setEditingTodoId(todo.id);
+    setNewTodoText(todo.text);
+    setNewTodoNotes(notesByTask[todo.id] ?? '');
+    const due = dueDateByTask[todo.id] ?? '';
+    if (due) {
+      const [datePart, timePart] = due.split('T');
+      setNewTodoDueDate(datePart || '');
+      setNewTodoDueTime(timePart?.slice(0, 5) || '');
+    } else {
+      setNewTodoDueDate('');
+      setNewTodoDueTime('');
+    }
+    setShowCreateSheet(true);
   };
+
+  const closeTaskSheet = () => {
+    setShowCreateSheet(false);
+    setEditingTodoId(null);
+  };
+
+  const incompleteTodos = visibleTodos.filter((todo) => !todo.completed);
+  const completedTodos = visibleTodos.filter((todo) => todo.completed);
+  const rankedIncompleteTodos = useMemo(
+    () =>
+      [...incompleteTodos].sort((a, b) => {
+        const aDue = dueDateByTask[a.id];
+        const bDue = dueDateByTask[b.id];
+        if (aDue && bDue) return new Date(aDue).getTime() - new Date(bDue).getTime();
+        if (aDue) return -1;
+        if (bDue) return 1;
+        return a.createdAt.getTime() - b.createdAt.getTime();
+      }),
+    [incompleteTodos, dueDateByTask]
+  );
+
+  useEffect(() => {
+    if (!focusMode || focusSelectionIds.length > 0) return;
+    setFocusSelectionIds(rankedIncompleteTodos.slice(0, 3).map((t) => t.id));
+  }, [focusMode, rankedIncompleteTodos, focusSelectionIds.length]);
+
+  const focusSelectedSet = new Set(focusSelectionIds);
+  const focusModeLimitedTodos = focusMode
+    ? rankedIncompleteTodos.filter((todo) => focusSelectionLocked ? focusSelectedSet.has(todo.id) : true)
+    : rankedIncompleteTodos;
+  const filteredTodos = activeFilter === 'completed' ? completedTodos : focusModeLimitedTodos;
+  const hasFocusModeOverflow = activeFilter === 'todo' && focusMode && rankedIncompleteTodos.length > 3;
 
   const handleSubmitNewTask = () => {
     if (newTodoText.trim()) {
-      onAddTodo(newTodoText.trim());
-      setNewTodoText('');
-      toast.success('Task added', { duration: 2000 });
+      const title = newTodoText.trim();
+      if (editingTodoId) {
+        const todo = visibleTodos.find((t) => t.id === editingTodoId);
+        if (todo && todo.text !== title) {
+          onEditTodo(editingTodoId, title);
+        }
+        setNotesByTask((prev) => ({ ...prev, [editingTodoId]: newTodoNotes.trim() || undefined }));
+        const dueIso = newTodoDueDate
+          ? `${newTodoDueDate}T${newTodoDueTime || '00:00'}`
+          : '';
+        setDueDateByTask((prev) => ({ ...prev, [editingTodoId]: dueIso || undefined }));
+        closeTaskSheet();
+        toast.success('Task updated', { duration: 2000 });
+      } else {
+        const dueIso = newTodoDueDate
+          ? `${newTodoDueDate}T${newTodoDueTime || '00:00'}`
+          : '';
+        onAddTodo(title);
+        setPendingDraft({
+          title,
+          notes: newTodoNotes,
+          dueDate: dueIso,
+        });
+        setNewTodoText('');
+        setNewTodoNotes('');
+        setNewTodoDueDate('');
+        setNewTodoDueTime('');
+        closeTaskSheet();
+        toast.success('Task added', { duration: 2000 });
+      }
     }
   };
 
@@ -107,88 +230,90 @@ export default function TodoListScreen({
     onToggleTodo(id);
   };
 
-  const startEditing = (id: string, text: string) => {
-    setEditingId(id);
-    setEditingText(text);
-  };
-
-  const saveEdit = () => {
-    if (editingId && editingText.trim()) {
-      onEditTodo(editingId, editingText.trim());
-      toast.success('Task updated', { duration: 2000 });
-    }
-    setEditingId(null);
-    setEditingText('');
-  };
-
-  const handleEditKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter') {
-      e.preventDefault();
-      saveEdit();
-    } else if (e.key === 'Escape') {
-      setEditingId(null);
-      setEditingText('');
-    }
-  };
-
   const toggleFocusMode = () => {
     const next = !focusMode;
     setFocusMode(next);
+    if (next) {
+      setFocusSelectionLocked(false);
+      setFocusSelectionIds(rankedIncompleteTodos.slice(0, 3).map((t) => t.id));
+      setShowFocusSelectionOverlay(true);
+    } else {
+      setShowFocusSelectionOverlay(false);
+      setFocusSelectionLocked(false);
+    }
     try {
-      localStorage.setItem('lifelevel-focus-mode', JSON.stringify(next));
-      window.dispatchEvent(new Event('canopy-focus-mode-updated'));
+      localStorage.setItem(FOCUS_MODE_STORAGE_KEY, JSON.stringify(next));
+      window.dispatchEvent(new Event(FOCUS_MODE_UPDATED_EVENT));
     } catch {
       // no-op
     }
   };
 
+  const toggleFocusPrompt = (id: string) => {
+    setFocusPromptFor((current) => (current === id ? null : id));
+  };
+
+  const confirmFocusPrompt = (todo: Todo) => {
+    setFocusPromptFor(null);
+    onOpenFocusTask(todo);
+  };
+
+  const toggleFocusSelection = (id: string) => {
+    const current = focusSelectionIds;
+    const selected = new Set(current);
+    if (selected.has(id)) {
+      if (selected.size <= 1) return;
+      selected.delete(id);
+    } else if (selected.size < 3) {
+      selected.add(id);
+    } else {
+      const first = current[0];
+      selected.delete(first);
+      selected.add(id);
+    }
+    setFocusSelectionIds(Array.from(selected));
+  };
+
+  const overlayRoot = typeof document !== 'undefined' ? document.body : null;
+
   return (
-    <div className="flex flex-col h-full overflow-hidden">
-      <div className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 pt-4">
-        <h2 className="text-xs tracking-widest text-gray-400 mb-3 uppercase">Hi Johanna</h2>
-        {/* Header */}
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="font-serif text-4xl text-gray-900">Tasks</h2>
+    <div className={`relative flex h-full flex-col ${showCreateSheet ? 'z-[80]' : 'z-0'}`}>
+      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-[var(--space-4)] pb-24 pt-4">
+        <h2 className="mb-3 text-xs uppercase tracking-widest text-gray-400">Hi Johanna</h2>
+        <div className="mb-6 flex items-center justify-between">
+          <div>
+            <h2 className="mb-0 font-serif text-[2.6rem] leading-none text-gray-900">Tasks</h2>
+            <p className="mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">What needs to get done today?</p>
+          </div>
           <button
+            type="button"
             onClick={toggleFocusMode}
-            className="inline-flex items-center gap-1.5 rounded-[20px] bg-white border border-[#E8E4F3] px-3 py-1.5"
+            className={`inline-flex items-center gap-[var(--space-2)] rounded-[var(--radius-full)] border px-[var(--space-3)] py-[var(--space-2)] shadow-sm transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
+              focusMode
+                ? 'border-[var(--accent-teal)] bg-[var(--surface-card-subtle-2)] hover:bg-[var(--surface-card-subtle-3)]'
+                : 'border-[var(--border-soft)] bg-[var(--surface-base)] hover:bg-[var(--surface-hover-panel)]'
+            }`}
             aria-label="Toggle focus mode"
+            aria-pressed={focusMode}
           >
-            <Target className={`w-[14px] h-[14px] ${focusMode ? 'text-[#1abf8f]' : 'text-gray-400'}`} />
-            <span className={`text-[12px] font-medium ${focusMode ? 'text-[#1abf8f]' : 'text-gray-500'}`}>
+            <Target className={`h-[14px] w-[14px] ${focusMode ? 'text-[var(--accent-teal)]' : 'text-[var(--text-caption-2)]'}`} />
+            <span className={`text-[12px] font-medium ${focusMode ? 'text-[var(--accent-teal-deep)]' : 'text-[var(--text-body-muted-2)]'}`}>
               Focus mode
             </span>
           </button>
         </div>
 
-        {/* Quote card */}
-        <div className="bg-white/85 backdrop-blur-sm rounded-3xl shadow-sm p-4 mb-4 border border-[#E8E4F3]">
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-xs tracking-widest uppercase text-[#8B86A3]">Quote of the day</p>
-          </div>
-          <motion.p
-            key={quoteIndex}
-            className="text-sm italic text-[#5F5A74]"
-            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.28 }}
-          >
-            {QUOTES[quoteIndex].text}
-          </motion.p>
-          <p className="text-xs text-[#7A7392] mt-1">Source: {QUOTES[quoteIndex].source}</p>
-        </div>
-
-        {/* Pill filter tabs */}
-        <div className="bg-white/85 rounded-full p-1.5 mb-4 border border-[#E8E4F3] flex gap-1">
+        <div className="mb-6 flex gap-[var(--space-1)] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-85)] p-[var(--space-2)]">
           {[
             { id: 'todo' as const, label: 'To Do' },
             { id: 'completed' as const, label: 'Completed' },
           ].map((tab) => (
             <button
               key={tab.id}
+              type="button"
               onClick={() => setActiveFilter(tab.id)}
-              className={`flex-1 py-2 rounded-full text-sm transition-colors ${
-                activeFilter === tab.id ? 'bg-[#2D2B3E] text-white' : 'text-[#6F6986] hover:bg-[#F1EDF9]'
+              className={`flex-1 rounded-[var(--radius-full)] py-[var(--space-2)] text-sm transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base-85)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
+                activeFilter === tab.id ? 'bg-[var(--text-strong-alt)] text-white hover:bg-[var(--text-strong-alt)]' : 'text-[var(--text-body-muted-2)] hover:bg-[var(--surface-hover-panel-soft)]'
               }`}
             >
               {tab.label}
@@ -196,219 +321,335 @@ export default function TodoListScreen({
           ))}
         </div>
 
-        {/* Add new task card */}
-        <div className="bg-white rounded-3xl shadow-sm p-4 mb-6">
-          <div className="flex items-center gap-3">
-            <button
-              onClick={handleSubmitNewTask}
-              disabled={!newTodoText.trim()}
-              className="w-8 h-8 flex-shrink-0 rounded-full bg-[#34A0DE] hover:bg-[#3431DE] disabled:bg-gray-200 flex items-center justify-center transition-colors"
-            >
-              <Plus className="w-5 h-5 text-white" />
-            </button>
-            <input
-              type="text"
-              value={newTodoText}
-              onChange={(e) => setNewTodoText(e.target.value)}
-              onKeyDown={handleInputKeyDown}
-              placeholder="Add a new task..."
-              className="flex-1 bg-transparent border-0 outline-none text-gray-700 placeholder:text-gray-300"
-            />
-          </div>
-        </div>
-
-        {/* Task list */}
         {filteredTodos.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-gray-400 text-lg">No tasks here yet</p>
-            <p className="text-gray-300 text-sm mt-2">
-              {activeFilter === 'completed'
-                ? 'Completed tasks will appear here'
-                : 'Add your first task above'}
+          <div className="py-12 text-center">
+            <p className="text-lg text-gray-400">No tasks here yet</p>
+            <p className="mt-2 text-sm text-gray-300">
+              {activeFilter === 'completed' ? 'Completed tasks will appear here' : 'Add your first task above'}
             </p>
           </div>
         ) : (
           <div className="space-y-3">
             <AnimatePresence initial={false}>
-            {filteredTodos.map((todo) => (
-              <motion.div
-                key={todo.id}
-                layout={!prefersReducedMotion}
-                initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -18 }}
-                animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -10, height: 0, marginBottom: 0 }}
-                transition={{ duration: 0.3 }}
-                className="bg-white rounded-3xl shadow-sm p-4"
-              >
-                <div className="flex items-start gap-3 relative">
-                  {/* Checkbox */}
-                  <motion.button
-                    onClick={() => handleToggle(todo.id, todo.completed)}
-                    className={`w-6 h-6 flex-shrink-0 rounded-full border-2 flex items-center justify-center transition-colors mt-0.5 ${
-                      todo.completed ? 'bg-teal-500 border-teal-500' : 'border-gray-300 hover:border-teal-500'
-                    }`}
-                    whileTap={prefersReducedMotion ? {} : { scale: 0.96 }}
-                    animate={
-                      completingId === todo.id && !prefersReducedMotion
-                        ? { scale: [1, 1.14, 1], backgroundColor: ['#ffffff', '#ccfbf1', '#99f6e4'] }
-                        : {}
+              {filteredTodos.map((todo) => {
+                const showFocusPrompt = focusPromptFor === todo.id;
+                return (
+                  <motion.div
+                    key={todo.id}
+                    layout={!prefersReducedMotion}
+                    initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -12 }}
+                    animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+                    exit={
+                      prefersReducedMotion
+                        ? { opacity: 0 }
+                        : { opacity: 0, y: -8, height: 0, marginBottom: 0 }
                     }
                     transition={{ duration: 0.28 }}
+                    className="relative rounded-[var(--radius-md)] border border-[var(--border-soft-panel-3)] bg-[var(--surface-base)] p-[var(--space-3)] shadow-[var(--shadow-card-soft)]"
+                    drag={!todo.completed && activeFilter === 'todo' ? true : false}
+                    dragConstraints={{ left: -140, right: 0, top: 0, bottom: 0 }}
+                    dragElastic={0.06}
+                    onDragEnd={(_, info) => {
+                      if (todo.completed || activeFilter !== 'todo') return;
+                      const absX = Math.abs(info.offset.x);
+                      const absY = Math.abs(info.offset.y);
+                      if (info.offset.x < -92 && absX > absY) {
+                        onDeleteTodo(todo.id);
+                        toast.success('Task deleted', { duration: 1800 });
+                        return;
+                      }
+                      if (absY > absX && absY > 24) {
+                        const currentIndex = incompleteTodos.findIndex((t) => t.id === todo.id);
+                        if (currentIndex < 0) return;
+                        const nextIndex =
+                          info.offset.y > 0
+                            ? Math.min(currentIndex + 1, incompleteTodos.length - 1)
+                            : Math.max(currentIndex - 1, 0);
+                        if (nextIndex !== currentIndex) {
+                          onReorderTodos(currentIndex, nextIndex);
+                        }
+                      }
+                    }}
                   >
-                    {todo.completed && <Check className="w-4 h-4 text-white" />}
-                  </motion.button>
+                    <div className="flex items-start gap-[var(--space-3)]">
+                      <motion.button
+                        type="button"
+                        onClick={() => handleToggle(todo.id, todo.completed)}
+                        className={`flex h-7 w-7 flex-shrink-0 items-center justify-center rounded-[var(--radius-full)] border-2 transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
+                          todo.completed
+                            ? 'border-[var(--accent-teal)] bg-[var(--accent-teal)] hover:bg-[var(--accent-teal-hover)] hover:border-[var(--accent-teal-hover)]'
+                            : 'border-[var(--accent-soft-border)] bg-[var(--surface-base)] hover:border-[color:var(--accent-teal)]/50'
+                        }`}
+                        whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
+                        animate={
+                          completingId === todo.id && !prefersReducedMotion
+                            ? {
+                                scale: [1, 1.12, 1],
+                                backgroundColor: ['var(--bg-priority-flash-start)', 'var(--bg-priority-flash-mid)', 'var(--bg-priority-flash-end)'],
+                              }
+                            : {}
+                        }
+                        transition={{ duration: 0.28 }}
+                        aria-label={todo.completed ? 'Mark incomplete' : 'Mark complete'}
+                      >
+                        {todo.completed && <Check className="h-3.5 w-3.5 text-white" strokeWidth={2.5} />}
+                      </motion.button>
 
-                  {/* Task text */}
-                  {editingId === todo.id ? (
-                    <input
-                      type="text"
-                      value={editingText}
-                      onChange={(e) => setEditingText(e.target.value)}
-                      onKeyDown={handleEditKeyDown}
-                      onBlur={saveEdit}
-                      className="flex-1 bg-transparent border-0 border-b-2 border-[#34A0DE] outline-none text-gray-700"
-                      autoFocus
-                    />
-                  ) : (
-                    <motion.p
-                      onClick={() => startEditing(todo.id, todo.text)}
-                      className={`flex-1 cursor-text hover:text-gray-900 transition-colors ${todo.completed ? 'text-gray-400' : 'text-gray-700'}`}
-                      animate={
-                        completingId === todo.id
-                          ? { opacity: 0.75 }
-                          : { opacity: 1 }
-                      }
-                      transition={{ duration: 0.24 }}
-                    >
-                      {completingId === todo.id && (
-                        <motion.span
-                          aria-hidden="true"
-                          className="absolute left-0 right-10 top-1/2 h-[1.5px] bg-teal-500 origin-left"
-                          initial={prefersReducedMotion ? { opacity: 0 } : { scaleX: 0, opacity: 0.9 }}
-                          animate={prefersReducedMotion ? { opacity: 1 } : { scaleX: 1, opacity: 1 }}
-                          transition={{ duration: 0.28 }}
-                        />
-                      )}
-                      <span className={todo.completed ? 'line-through' : ''}>{todo.text}</span>
-                    </motion.p>
-                  )}
-
-                  {categoryByTask[todo.id] && (
-                    <span className={`text-[11px] px-2 py-1 rounded-full capitalize ${getCategoryPillClasses(categoryByTask[todo.id]!)}`}>
-                      {categoryByTask[todo.id]}
-                    </span>
-                  )}
-
-                  {priorityByTask[todo.id] && (
-                    <span className={`text-[11px] px-2 py-1 rounded-full capitalize ${getPriorityPillClasses(priorityByTask[todo.id]!)}`}>
-                      {priorityByTask[todo.id]}
-                    </span>
-                  )}
-
-                  <div className="relative">
-                    {(() => {
-                      const category = categoryByTask[todo.id];
-                      if (!category) {
-                        return (
-                          <button
-                            onClick={() => setOpenTagMenuFor(openTagMenuFor === todo.id ? null : todo.id)}
-                            className="group inline-flex items-center gap-1 px-2 py-1 rounded-full text-[11px] text-[#8B86A3] hover:bg-[#F1EDF9]"
-                            aria-label="Add tags"
+                      <div className="min-w-0 flex-1" data-focus-session-root="true">
+                        <div className="relative min-w-0">
+                          {completingId === todo.id && (
+                            <motion.span
+                              aria-hidden
+                              className="pointer-events-none absolute left-0 right-0 top-[0.55em] h-[1.5px] bg-teal-500"
+                              initial={prefersReducedMotion ? { opacity: 0 } : { scaleX: 0, opacity: 0.9 }}
+                              animate={prefersReducedMotion ? { opacity: 1 } : { scaleX: 1, opacity: 1 }}
+                              transition={{ duration: 0.28 }}
+                              style={{ transformOrigin: 'left' }}
+                            />
+                          )}
+                          <p
+                            className={`text-[15px] font-medium leading-snug ${
+                              todo.completed ? 'text-gray-400 line-through' : 'text-[var(--text-strong-alt)]'
+                            } text-left`}
                           >
-                            <span className="opacity-0 group-hover:opacity-100 transition-opacity">Add tag</span>
-                            <Pencil className="w-3 h-3 opacity-55 group-hover:opacity-80 transition-opacity" />
-                          </button>
-                        );
-                      }
-                      return (
-                        <button
-                          onClick={() => setOpenTagMenuFor(openTagMenuFor === todo.id ? null : todo.id)}
-                          className={`group inline-flex items-center gap-1.5 px-2 py-1 rounded-full text-[11px] capitalize ${getCategoryPillClasses(category)}`}
-                          aria-label="Edit tags"
-                        >
-                          <span>{category}</span>
-                          <Pencil className="w-3 h-3 opacity-0 group-hover:opacity-70 transition-opacity" />
-                        </button>
-                      );
-                    })()}
+                            {todo.text}
+                          </p>
+                        </div>
+                        <AnimatePresence>
+                          {showFocusPrompt && !todo.completed ? (
+                            <motion.div
+                              data-focus-session-root="true"
+                              className="absolute left-0 top-[calc(100%+var(--space-2))] z-10 flex h-9 w-[min(100%,17.5rem)] items-center gap-[var(--space-2)] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-95)] px-[var(--space-3)] py-[var(--space-2)] shadow-[var(--shadow-card-soft)]"
+                              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+                              animate={{ opacity: 1, scale: 1 }}
+                              exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, scale: 0.95 }}
+                              transition={{ duration: 0.12, ease: 'easeOut' }}
+                            >
+                              <Timer className="h-3.5 w-3.5 shrink-0 text-[var(--text-caption-2)]" strokeWidth={1.9} />
+                              <span className="min-w-0 flex-1 truncate text-[13px] leading-none text-[var(--text-body-muted-2)]">
+                                Start focus session?
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => confirmFocusPrompt(todo)}
+                                className="shrink-0 text-[13px] font-medium text-[var(--accent-teal)] transition-all duration-150 ease-out hover:text-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97]"
+                              >
+                                Start
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setFocusPromptFor(null)}
+                                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[var(--radius-full)] text-[var(--text-caption-2)] transition-all duration-150 ease-out hover:text-[var(--text-body-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97]"
+                                aria-label="Dismiss focus session prompt"
+                              >
+                                <X className="h-3.5 w-3.5" strokeWidth={1.9} />
+                              </button>
+                            </motion.div>
+                          ) : null}
+                        </AnimatePresence>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setFocusPromptFor(null);
+                          openEditSheet(todo);
+                        }}
+                        className="flex h-11 min-h-[44px] w-11 min-w-[44px] flex-shrink-0 items-center justify-center rounded-[var(--radius-sm)] text-[var(--text-body-muted)] transition-all duration-150 ease-out hover:bg-[var(--surface-hover-panel-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+                        aria-label={`Edit task ${todo.text}`}
+                      >
+                        <MoreHorizontal className="h-5 w-5" strokeWidth={1.75} />
+                      </button>
+                    </div>
+
                     <AnimatePresence>
-                      {openTagMenuFor === todo.id && (
-                        <motion.div
+                      {xpBurstTaskId === todo.id && (
+                        <motion.span
+                          className="absolute right-16 top-4 text-xs font-medium text-teal-600"
                           initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
-                          animate={{ opacity: 1, y: 0 }}
+                          animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: -6 }}
                           exit={{ opacity: 0 }}
-                          transition={{ duration: 0.24 }}
-                          className="absolute right-0 top-8 z-20 bg-white rounded-2xl border border-[#E8E4F3] shadow-lg p-3 w-44"
+                          transition={{ duration: 0.3 }}
                         >
-                          <p className="text-[11px] text-[#8B86A3] mb-2 uppercase tracking-wider">Category</p>
-                          <div className="flex flex-wrap gap-1.5 mb-3">
-                            {CATEGORY_OPTIONS.map((category) => (
-                              <button
-                                key={category}
-                                onClick={() => setCategoryByTask((prev) => ({ ...prev, [todo.id]: category }))}
-                                className={`px-2 py-1 rounded-full text-[11px] capitalize ${getCategoryPillClasses(category)}`}
-                              >
-                                {category}
-                              </button>
-                            ))}
-                            <button
-                              onClick={() => setCategoryByTask((prev) => ({ ...prev, [todo.id]: undefined }))}
-                              className="px-2 py-1 rounded-full text-[11px] bg-gray-100 text-gray-500"
-                            >
-                              clear
-                            </button>
-                          </div>
-                          <p className="text-[11px] text-[#8B86A3] mb-2 uppercase tracking-wider">Priority</p>
-                          <div className="flex flex-wrap gap-1.5">
-                            {PRIORITY_OPTIONS.map((priority) => (
-                              <button
-                                key={priority}
-                                onClick={() => setPriorityByTask((prev) => ({ ...prev, [todo.id]: priority }))}
-                                className={`px-2 py-1 rounded-full text-[11px] capitalize ${getPriorityPillClasses(priority)}`}
-                              >
-                                {priority}
-                              </button>
-                            ))}
-                            <button
-                              onClick={() => setPriorityByTask((prev) => ({ ...prev, [todo.id]: undefined }))}
-                              className="px-2 py-1 rounded-full text-[11px] bg-gray-100 text-gray-500"
-                            >
-                              clear
-                            </button>
-                          </div>
-                        </motion.div>
+                          +10 pts
+                        </motion.span>
                       )}
                     </AnimatePresence>
-                  </div>
-
-                  <button
-                    onClick={() => onDeleteTodo(todo.id)}
-                    aria-label={`Delete task ${todo.text}`}
-                    className="w-7 h-7 flex-shrink-0 rounded-full text-gray-300 hover:text-gray-500 hover:bg-gray-100 transition-colors"
-                  >
-                    <X className="w-4 h-4 mx-auto" />
-                  </button>
-
-                  <AnimatePresence>
-                    {xpBurstTaskId === todo.id && (
-                      <motion.span
-                        className="absolute right-10 -top-2 text-xs text-teal-600 font-medium"
-                        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 6 }}
-                        animate={prefersReducedMotion ? { opacity: 1 } : { opacity: 1, y: -8 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.32 }}
-                      >
-                        +10 pts
-                      </motion.span>
-                    )}
-                  </AnimatePresence>
-                </div>
-              </motion.div>
-            ))}
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
+            {hasFocusModeOverflow && focusSelectionLocked ? (
+              <p className="px-1 pt-1 text-xs text-[var(--text-caption-2)]">
+                Focus mode is on - showing top 3 tasks first
+              </p>
+            ) : null}
           </div>
         )}
       </div>
+
+      {activeFilter === 'todo' && (
+        <button
+          type="button"
+          onClick={openCreateSheet}
+          className="fixed z-[120] flex h-14 w-14 items-center justify-center rounded-[var(--radius-full)] bg-[var(--text-strong-alt)] text-white shadow-[var(--shadow-card-soft)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2"
+          style={{
+            right: '20px',
+            bottom: 'calc(env(safe-area-inset-bottom) + 16px + 96px)',
+          }}
+          aria-label="Create new task"
+        >
+          <Plus className="h-6 w-6" />
+        </button>
+      )}
+
+      {overlayRoot
+        ? createPortal(
+            <AnimatePresence>
+              {showFocusSelectionOverlay && activeFilter === 'todo' && focusMode && rankedIncompleteTodos.length > 0 && (
+                <>
+                  <motion.button
+                    type="button"
+                    aria-label="Dismiss focus mode selection"
+                    className="fixed inset-0 z-[145]"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={() => {
+                      setShowFocusSelectionOverlay(false);
+                      setFocusMode(false);
+                      setFocusSelectionLocked(false);
+                      try {
+                        localStorage.setItem(FOCUS_MODE_STORAGE_KEY, JSON.stringify(false));
+                        window.dispatchEvent(new Event(FOCUS_MODE_UPDATED_EVENT));
+                      } catch {
+                        // no-op
+                      }
+                    }}
+                  />
+                  <motion.div
+                    className="fixed inset-x-4 top-[max(env(safe-area-inset-top),6rem)] z-[146] rounded-[var(--radius-lg)] border border-[var(--border-soft)] bg-[var(--surface-base)] p-[var(--space-4)] shadow-[var(--shadow-card-soft)]"
+                    initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
+                    transition={{ duration: 0.22 }}
+                  >
+                    <p className="mb-2 text-sm text-[var(--text-body-muted-2)]">Choose up to 3 focus tasks</p>
+                    <div className="max-h-[45dvh] space-y-2 overflow-y-auto pr-1">
+                      {rankedIncompleteTodos.map((todo) => {
+                        const isSelected = focusSelectedSet.has(todo.id);
+                        const dueText = dueDateByTask[todo.id]
+                          ? new Date(dueDateByTask[todo.id] as string).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: 'numeric',
+                              minute: '2-digit',
+                            })
+                          : 'No due date';
+                        return (
+                          <button
+                            key={todo.id}
+                            type="button"
+                            onClick={() => toggleFocusSelection(todo.id)}
+                            className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] px-3 py-2 text-left"
+                          >
+                            <span
+                              className={`flex h-5 w-5 items-center justify-center rounded-[var(--radius-full)] border ${
+                                isSelected
+                                  ? 'border-[var(--accent-teal)] bg-[var(--accent-teal)] text-white'
+                                  : 'border-[var(--border-soft)] bg-[var(--surface-base)]'
+                              }`}
+                            >
+                              {isSelected ? <Check className="h-3 w-3" /> : null}
+                            </span>
+                            <span className="min-w-0 flex-1 truncate text-sm text-[var(--text-strong-alt)]">{todo.text}</span>
+                            <span className="text-xs text-[var(--text-caption-2)]">{dueText}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setFocusSelectionLocked(true);
+                        setShowFocusSelectionOverlay(false);
+                      }}
+                      className="mt-3 h-11 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-sm font-medium text-white"
+                    >
+                      Lock in focus list
+                    </button>
+                  </motion.div>
+                </>
+              )}
+              {showCreateSheet && (
+                <>
+                  <motion.button
+                    type="button"
+                    aria-label="Dismiss new task sheet"
+                    className="fixed inset-0 z-[150]"
+                    style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.2 }}
+                    onClick={closeTaskSheet}
+                  />
+                  <motion.div
+                    className="fixed inset-x-0 bottom-0 z-[220] max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-t-[24px] bg-[var(--surface-base)] px-[var(--space-5)] pb-[calc(var(--space-6)+env(safe-area-inset-bottom))] pt-[var(--space-3)]"
+                    initial={{ y: '100%' }}
+                    animate={{ y: 0 }}
+                    exit={{ y: '100%' }}
+                    transition={prefersReducedMotion ? { duration: 0.2 } : { type: 'spring', stiffness: 360, damping: 32, duration: 0.25 }}
+                  >
+              <div className="mx-auto mb-3 h-1.5 w-10 rounded-[var(--radius-full)] bg-[var(--border-soft)]" />
+              <h3 className="mb-3 font-serif text-xl text-[var(--text-strong-alt)]">{editingTodoId ? 'Edit Task' : 'New Task'}</h3>
+              <input
+                type="text"
+                value={newTodoText}
+                onChange={(e) => setNewTodoText(e.target.value)}
+                placeholder="Task title"
+                className="mb-3 w-full border-0 border-b border-[var(--border-soft)] bg-transparent pb-2 text-[var(--text-strong-alt)] outline-none focus:border-[var(--accent-teal)]"
+                autoFocus
+              />
+              <textarea
+                value={newTodoNotes}
+                onChange={(e) => setNewTodoNotes(e.target.value)}
+                placeholder="Notes"
+                rows={3}
+                className="mb-3 w-full resize-none border-0 border-b border-[var(--border-soft)] bg-transparent pb-2 text-[var(--text-strong-alt)] outline-none focus:border-[var(--accent-teal)]"
+              />
+              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-caption-2)]">Due</p>
+              <div className="mb-4 grid grid-cols-2 gap-2">
+                <input
+                  type="date"
+                  value={newTodoDueDate}
+                  onChange={(e) => setNewTodoDueDate(e.target.value)}
+                  className="w-full rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] px-3 py-2 text-sm text-[var(--text-strong-alt)] outline-none transition-all duration-150 ease-out focus:border-[var(--accent-teal)] focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-accent-25)]"
+                />
+                <input
+                  type="time"
+                  value={newTodoDueTime}
+                  onChange={(e) => setNewTodoDueTime(e.target.value)}
+                  className="w-full rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] px-3 py-2 text-sm text-[var(--text-strong-alt)] outline-none transition-all duration-150 ease-out focus:border-[var(--accent-teal)] focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-accent-25)]"
+                />
+              </div>
+              <button
+                type="button"
+                onClick={handleSubmitNewTask}
+                disabled={!newTodoText.trim()}
+                className="h-12 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-sm font-medium text-white disabled:opacity-50"
+              >
+                {editingTodoId ? 'Save Changes' : 'Create Task'}
+              </button>
+                  </motion.div>
+                </>
+              )}
+            </AnimatePresence>,
+            overlayRoot
+          )
+        : null}
     </div>
   );
 }

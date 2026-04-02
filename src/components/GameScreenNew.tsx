@@ -39,6 +39,7 @@ export default function GameScreen({
   todos,
 }: GameScreenProps) {
   const prefersReducedMotion = useReducedMotion();
+  const [focusPlantCelebrating, setFocusPlantCelebrating] = useState(false);
   const [hasJournaledToday, setHasJournaledToday] = useState(false);
   const [completedTasksToday, setCompletedTasksToday] = useState(0);
   const [selectedPlant, setSelectedPlant] = useState('quiet-fern');
@@ -88,6 +89,21 @@ export default function GameScreen({
   };
 
   const currentPlant = plants[selectedPlant as keyof typeof plants] || plants['quiet-fern'];
+
+  useEffect(() => {
+    let timeoutId: ReturnType<typeof window.setTimeout>;
+    const onCelebrate = () => {
+      setFocusPlantCelebrating(true);
+      window.clearTimeout(timeoutId);
+      const ms = prefersReducedMotion ? 400 : 720;
+      timeoutId = window.setTimeout(() => setFocusPlantCelebrating(false), ms);
+    };
+    window.addEventListener('canopy-focus-session-celebrate', onCelebrate);
+    return () => {
+      window.removeEventListener('canopy-focus-session-celebrate', onCelebrate);
+      window.clearTimeout(timeoutId);
+    };
+  }, [prefersReducedMotion]);
 
   useEffect(() => {
     if (playerProgress.level > prevLevelRef.current) {
@@ -230,27 +246,29 @@ export default function GameScreen({
   const yearGardenDays = generateYearGarden();
 
   return (
-    <div className="flex flex-col h-full overflow-hidden">
+    <div className="flex h-full flex-col">
       <motion.div 
-        className="flex-1 overflow-y-auto custom-scrollbar px-4 pb-24 pt-6"
+        className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-24 pt-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.3 }}
       >
-        <h2 className="text-xs tracking-widest text-gray-400 mb-3 uppercase">Your Garden</h2>
+        <h2 className="mb-3 text-xs uppercase tracking-widest text-gray-400">Your Garden</h2>
+        <h2 className="mb-0 font-serif text-[2.6rem] leading-none text-[var(--text-strong-alt)]">Garden</h2>
+        <p className="mb-6 mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">Your plant grows as you show up.</p>
         
         {/* Plant Card */}
         <motion.div 
-          className="relative bg-white/90 backdrop-blur-sm rounded-3xl shadow-sm p-6 mb-6 flex flex-col items-center border border-[#E8E4F3]"
+          className="relative mb-4 flex flex-col items-center rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-base-90)] p-4 shadow-sm backdrop-blur-sm"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.1 }}
         >
           {/* Garden Field with Plants */}
-          <div className="mb-4 w-full relative">
+          <div className="mb-3 w-full relative">
             {/* Garden background field - Pixelated grass texture */}
             <div 
-              className="w-full h-48 rounded-2xl overflow-hidden relative"
+              className="relative h-36 w-full overflow-hidden rounded-2xl"
               style={{
                 backgroundImage: `url(${grassTexture})`,
                 backgroundSize: 'cover',
@@ -262,7 +280,7 @@ export default function GameScreen({
               <div className="absolute inset-0 bg-gradient-to-b from-black/5 via-transparent to-black/10"></div>
               
               {/* Plant positions on the field */}
-              <div className="absolute inset-0 flex items-end justify-center pb-8 gap-6">
+              <div className="absolute inset-0 flex items-end justify-center gap-6 pb-6">
                 {/* Left plant (if level 10+) */}
                 {playerProgress.level >= 10 && (
                   <motion.div 
@@ -294,15 +312,20 @@ export default function GameScreen({
                 <motion.div 
                   className="relative" 
                   style={{ marginBottom: '0px' }}
-                  animate={{ 
-                    y: [0, -6, 0],
-                    scale: [1, 1.03, 1]
-                  }}
-                  transition={{ 
-                    duration: 4, 
-                    repeat: Infinity, 
-                    ease: "easeInOut" 
-                  }}
+                  animate={
+                    focusPlantCelebrating
+                      ? prefersReducedMotion
+                        ? { opacity: [1, 0.9, 1], y: 0, scale: 1 }
+                        : { y: [0, -16, 0], scale: [1, 1.08, 1] }
+                      : prefersReducedMotion
+                        ? { y: 0, scale: 1, opacity: 1 }
+                        : { y: [0, -6, 0], scale: [1, 1.03, 1] }
+                  }
+                  transition={
+                    focusPlantCelebrating
+                      ? { duration: prefersReducedMotion ? 0.35 : 0.65, ease: 'easeOut' }
+                      : { duration: 4, repeat: prefersReducedMotion ? 0 : Infinity, ease: 'easeInOut' }
+                  }
                 >
                   <img 
                     src={currentPlant.image} 
@@ -343,19 +366,19 @@ export default function GameScreen({
               </div>
               
               {/* Plant name label at bottom */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 bg-black/50 backdrop-blur-sm px-3 py-1 rounded-full">
+              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 backdrop-blur-sm">
                 <p className="text-white text-xs font-medium">{currentPlant.name}</p>
               </div>
             </div>
           </div>
 
           {/* Plant Name */}
-          <h3 className="font-serif text-2xl text-gray-900 mb-1 italic">
+          <h3 className="mb-1 font-serif text-[1.75rem] italic text-gray-900">
             {plantName}
           </h3>
           
           {/* Level Info */}
-          <p className="text-sm text-gray-400 mb-6">
+          <p className="mb-3 text-sm text-gray-400">
             Level {playerProgress.level} · Seedling
           </p>
 
@@ -363,14 +386,14 @@ export default function GameScreen({
           <div className="w-full mb-2">
             <div className="flex items-center justify-between text-sm mb-2">
               <span className="text-gray-400">To level {playerProgress.level + 1}</span>
-              <span className="text-[#34A0DE] font-medium">
+              <span className="font-medium text-[var(--accent-cyan)]">
                 {displayedXP} / {xpForNextLevel} pts
               </span>
             </div>
             
             <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
               <motion.div
-                className="h-full bg-[#1ABF8F] rounded-full"
+                className="h-full rounded-full bg-[var(--accent-teal)]"
                 initial={{ width: 0 }}
                 animate={{ width: `${displayedProgressPercentage}%` }}
                 transition={{ duration: 0.35, ease: 'easeOut' }}
@@ -406,16 +429,16 @@ export default function GameScreen({
 
         {/* Today's Watering Card */}
         <motion.div 
-          className="bg-white/80 backdrop-blur-sm rounded-3xl shadow-sm p-6 mb-6 border border-[#E8E4F3]"
+          className="mb-4 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-base-80)] p-3 shadow-sm backdrop-blur-sm"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.2 }}
         >
-          <h4 className="text-sm text-[#8B86A3] mb-4 uppercase tracking-wider font-light">
+          <h4 className="mb-2 text-xs font-light uppercase tracking-wider text-[var(--text-caption-2)]">
             Today's watering
           </h4>
           
-          <div className="space-y-4">
+          <div className="space-y-2.5">
             {/* Journal Entry */}
             <motion.div 
               className="flex items-center justify-between"
@@ -423,9 +446,9 @@ export default function GameScreen({
               transition={{ type: "spring", stiffness: 300 }}
             >
               <div>
-                <p className="text-[#2D2B3E] font-light">Journal entry</p>
+                <p className="text-sm font-light text-[var(--text-strong-alt)]">Journal entry</p>
                 <motion.p 
-                  className="text-sm text-[#8B86A3]"
+                  className="text-xs text-[var(--text-caption-2)]"
                   animate={{ 
                     opacity: hasJournaledToday ? [0.5, 1, 0.5] : 1 
                   }}
@@ -439,10 +462,10 @@ export default function GameScreen({
                 </motion.p>
               </div>
               <motion.div
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
                   hasJournaledToday
-                    ? 'bg-gradient-to-br from-[#A8C5DA] to-[#8B86A3]'
-                    : 'border-2 border-[#E8E4F3] bg-white'
+                    ? 'bg-gradient-to-br from-[var(--accent-watered-start)] to-[var(--text-caption-2)]'
+                    : 'border-2 border-[var(--border-soft)] bg-[var(--surface-base)]'
                 }`}
                 animate={{ 
                   scale: hasJournaledToday ? [1, 1.1, 1] : 1 
@@ -458,7 +481,7 @@ export default function GameScreen({
                       animate={{ scale: 1, rotate: 0 }}
                       exit={{ scale: 0, rotate: 180 }}
                       transition={{ type: "spring", stiffness: 200, damping: 10 }}
-                      className="w-6 h-6 text-white"
+                      className="h-5 w-5 text-white"
                       fill="none"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -479,7 +502,7 @@ export default function GameScreen({
             </motion.div>
 
             {/* Divider */}
-            <div className="border-t border-[#EBE8F4]"></div>
+            <div className="border-t border-[var(--border-soft-panel-2)]/70" />
 
             {/* Complete 2 Tasks */}
             <motion.div 
@@ -488,9 +511,9 @@ export default function GameScreen({
               transition={{ type: "spring", stiffness: 300 }}
             >
               <div>
-                <p className="text-[#2D2B3E] font-light">Complete 2 tasks</p>
+                <p className="text-sm font-light text-[var(--text-strong-alt)]">Complete 2 tasks</p>
                 <motion.p 
-                  className="text-sm text-[#8B86A3]"
+                  className="text-xs text-[var(--text-caption-2)]"
                   animate={{ 
                     opacity: completedTasksToday >= 2 ? [0.5, 1, 0.5] : 1 
                   }}
@@ -504,10 +527,10 @@ export default function GameScreen({
                 </motion.p>
               </div>
               <motion.div
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
                   completedTasksToday >= 2
-                    ? 'bg-gradient-to-br from-[#A8C5DA] to-[#8B86A3]'
-                    : 'border-2 border-[#E8E4F3] bg-white'
+                    ? 'bg-gradient-to-br from-[var(--accent-watered-start)] to-[var(--text-caption-2)]'
+                    : 'border-2 border-[var(--border-soft)] bg-[var(--surface-base)]'
                 }`}
                 animate={{ 
                   scale: completedTasksToday >= 2 ? [1, 1.1, 1] : 1 
@@ -523,7 +546,7 @@ export default function GameScreen({
                       animate={{ scale: 1, rotate: 0 }}
                       exit={{ scale: 0, rotate: 180 }}
                       transition={{ type: "spring", stiffness: 200, damping: 10 }}
-                      className="w-6 h-6 text-white"
+                      className="h-5 w-5 text-white"
                       fill="none"
                       strokeLinecap="round"
                       strokeLinejoin="round"
@@ -544,27 +567,27 @@ export default function GameScreen({
             </motion.div>
 
             {/* Divider */}
-            <div className="border-t border-[#EBE8F4]"></div>
+            <div className="border-t border-[var(--border-soft-panel-2)]/70" />
 
             {/* Focus mode used today */}
             <motion.div className="flex items-center justify-between">
               <div>
-                <p className="text-[#2D2B3E] font-light">Focus mode used today</p>
-                <p className="text-sm text-[#8B86A3]">+10 pts</p>
+                <p className="text-sm font-light text-[var(--text-strong-alt)]">Focus mode used today</p>
+                <p className="text-xs text-[var(--text-caption-2)]">+10 pts</p>
               </div>
               <motion.div
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                  focusModeToday ? 'bg-gradient-to-br from-[#A8C5DA] to-[#8B86A3]' : 'border-2 border-[#E8E4F3] bg-white'
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
+                  focusModeToday ? 'bg-gradient-to-br from-[var(--accent-watered-start)] to-[var(--text-caption-2)]' : 'border-2 border-[var(--border-soft)] bg-[var(--surface-base)]'
                 }`}
               >
                 {focusModeToday && (
-                  <Check className="w-6 h-6 text-white" />
+                  <Check className="h-5 w-5 text-white" />
                 )}
               </motion.div>
             </motion.div>
 
             {/* Divider */}
-            <div className="border-t border-[#EBE8F4]"></div>
+            <div className="border-t border-[var(--border-soft-panel-2)]/70" />
 
             {/* Two minute reset */}
             <motion.button
@@ -572,16 +595,16 @@ export default function GameScreen({
               className="w-full text-left flex items-center justify-between"
             >
               <div>
-                <p className="text-[#2D2B3E] font-light">2-minute reset</p>
-                <p className="text-sm text-[#8B86A3]">+5 pts</p>
+                <p className="text-sm font-light text-[var(--text-strong-alt)]">2-minute reset</p>
+                <p className="text-xs text-[var(--text-caption-2)]">+5 pts</p>
               </div>
               <motion.div
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                  didTwoMinuteReset ? 'bg-gradient-to-br from-[#A8C5DA] to-[#8B86A3]' : 'border-2 border-[#E8E4F3] bg-white'
+                className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
+                  didTwoMinuteReset ? 'bg-gradient-to-br from-[var(--accent-watered-start)] to-[var(--text-caption-2)]' : 'border-2 border-[var(--border-soft)] bg-[var(--surface-base)]'
                 }`}
               >
                 {didTwoMinuteReset && (
-                  <Check className="w-6 h-6 text-white" />
+                  <Check className="h-5 w-5 text-white" />
                 )}
               </motion.div>
             </motion.button>
@@ -595,7 +618,7 @@ export default function GameScreen({
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.4 }}
         >
-          <h4 className="text-xs text-[#8B86A3] mb-3 uppercase tracking-widest px-1 font-light">
+          <h4 className="mb-3 px-1 text-xs font-light uppercase tracking-widest text-[var(--text-caption-2)]">
             Your Plant Collection
           </h4>
           
@@ -621,13 +644,13 @@ export default function GameScreen({
                     stiffness: 200,
                     damping: 15
                   }}
-                  className={`relative bg-white/80 backdrop-blur-sm rounded-3xl shadow-sm p-4 border-2 transition-all ${
+                  className={`relative rounded-3xl border-2 bg-[var(--surface-base-80)] p-4 shadow-sm backdrop-blur-sm transition-all ${
                     isSelected
-                      ? 'border-[#8B86A3] shadow-lg'
-                      : 'border-[#E8E4F3]'
+                      ? 'border-[var(--text-caption-2)] shadow-lg'
+                      : 'border-[var(--border-soft)]'
                   } ${
                     isUnlocked
-                      ? 'cursor-pointer hover:border-[#8B86A3]/50 hover:shadow-md'
+                      ? 'cursor-pointer hover:border-[color:var(--text-caption-2)]/50 hover:shadow-md'
                       : 'cursor-not-allowed opacity-50'
                   }`}
                   whileHover={isUnlocked ? { 
@@ -639,7 +662,7 @@ export default function GameScreen({
                   {/* Selected state is shown by border styling only */}
                   
                   {/* Plant image */}
-                  <div className="aspect-square bg-gradient-to-br from-[#EBE8F4] to-[#E0DCF0] rounded-2xl mb-3 flex items-center justify-center overflow-hidden">
+                  <div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--surface-card-subtle-6)] to-[var(--surface-card-subtle-7)]">
                     <motion.img
                       src={plant.image}
                       alt={plant.name}
@@ -662,8 +685,8 @@ export default function GameScreen({
                   
                   {/* Plant info */}
                   <div className="text-center">
-                    <h5 className="text-sm font-medium text-[#2D2B3E] mb-1 font-light">{plant.name}</h5>
-                    <p className="text-xs text-[#8B86A3] font-light">
+                    <h5 className="mb-1 text-sm font-light font-medium text-[var(--text-strong-alt)]">{plant.name}</h5>
+                    <p className="text-xs font-light text-[var(--text-caption-2)]">
                       {isUnlocked ? `Level ${plant.unlockLevel}` : `Unlock at level ${plant.unlockLevel}`}
                     </p>
                   </div>

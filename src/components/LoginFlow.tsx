@@ -4,6 +4,7 @@ import { User, Lock } from 'lucide-react';
 import { getSupabaseClient } from '../utils/supabase/client';
 import { projectId, publicAnonKey } from '../utils/supabase/info';
 import svgPaths from '../imports/Frame47296-1/svg-0hdeo07ddu';
+import CanopyScreenBackground from './CanopyScreenBackground';
 
 interface LoginFlowProps {
   onAuthSuccess: (user: any, accessToken: string) => void;
@@ -122,99 +123,122 @@ const LoginFlow: React.FC<LoginFlowProps> = ({ onAuthSuccess, onGuestMode }) => 
 
   const canProceed = name.trim().length > 0 && password.length > 0 && (isReturningUser || confirmPassword.length > 0);
 
+  const inputClass =
+    'type-body w-full h-[46px] box-border rounded-[var(--radius-md)] border border-[var(--border-soft-muted)] bg-[var(--surface-auth-input)] pl-[34px] pr-[var(--space-4)] text-[var(--text-body)] shadow-none transition-all placeholder:text-[var(--text-label-3)] focus:border-[var(--accent-login-focus)] focus:ring-2 focus:ring-[color:var(--accent-login-ring)]/10 focus:outline-none';
+
   return (
     <div
-      className="absolute inset-0 bg-gradient-to-b from-[#EBE8F4] to-[#E0DCF0] flex items-center justify-center z-[100] p-4 overflow-y-auto"
-      style={{ paddingTop: 'max(env(safe-area-inset-top), 64px)' }}
+      className="absolute inset-0 z-[100] overflow-x-hidden overflow-y-auto bg-[var(--bg-screen-auth)]"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
-      <div className="w-full max-w-[320px] my-auto">
+      <CanopyScreenBackground variant="login" />
+
+      <div className="relative z-10 mx-auto flex min-h-[100dvh] w-full max-w-[390px] flex-col px-[var(--space-6)] pb-[max(env(safe-area-inset-bottom),var(--space-7))] pt-[clamp(1.75rem,8dvh,4.75rem)] sm:pt-[clamp(1.5rem,7dvh,4rem)]">
         <motion.div
-          className="text-center mb-5"
+          className="mb-[var(--space-5)] flex flex-col items-center pt-[var(--space-1)] sm:mb-[var(--space-6)]"
           initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.28 }}
         >
-          <div className="w-8 h-8 mx-auto mb-1">
+          <div className="mb-[var(--space-2)] h-8 w-8">
             <svg className="block size-full" fill="none" viewBox="0 0 780.771 775.61">
-              <path d={svgPaths.p2ff87f00} fill="#2D2B3E" />
+              <path d={svgPaths.p2ff87f00} fill="var(--text-strong-alt)" />
             </svg>
           </div>
-          <h1 className="font-serif text-6xl text-[#2D2B3E] leading-none">
+          <h1 className="type-display text-center tracking-tight text-[var(--text-brand-wordmark)]">
             Can<span className="italic">opy</span>
           </h1>
         </motion.div>
 
         <motion.div
-          initial={{ scale: 0.96, opacity: 0 }}
+          initial={prefersReducedMotion ? { opacity: 0 } : { scale: 0.98, opacity: 0 }}
           animate={{ scale: 1, opacity: 1 }}
           transition={{ duration: 0.3 }}
-          className="rounded-[32px] overflow-hidden shadow-xl border border-[#DCD7EB] bg-white"
+          className="mx-auto mt-[var(--space-1)] w-full max-w-[332px] overflow-hidden rounded-[var(--radius-xl)] border border-[var(--border-soft-alt)] bg-[var(--surface-auth-card)]"
+          style={{
+            boxShadow: 'var(--shadow-auth-card)',
+          }}
         >
-          <div className="bg-white px-6 pt-6 pb-7">
-            <div className="flex p-1 bg-[#EFEFF2] rounded-full mb-6">
+          <div className="bg-[var(--surface-auth-card)] px-[var(--space-5)] pb-[var(--space-8)] pt-[var(--space-5)]">
+            <div className="mb-[var(--space-5)] flex h-[46px] items-center rounded-[var(--radius-full)] bg-[var(--surface-auth-segment)] p-[var(--space-1)]">
               <button
                 type="button"
                 onClick={() => setIsReturningUser(true)}
-                className={`flex-1 py-2 rounded-full text-sm transition-colors ${isReturningUser ? 'bg-white text-[#2D2B3E]' : 'text-[#8B86A3]'}`}
+                className={`type-label flex h-[37px] flex-1 items-center justify-center rounded-[var(--radius-full)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-auth-segment)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
+                  isReturningUser ? 'bg-[var(--surface-base)] text-[var(--text-body-muted-4)] shadow-[var(--shadow-chip)] hover:bg-[var(--surface-base)]' : 'text-[var(--text-label)] hover:bg-[var(--surface-base-60)]'
+                }`}
               >
                 Login
               </button>
               <button
                 type="button"
                 onClick={() => setIsReturningUser(false)}
-                className={`flex-1 py-2 rounded-full text-sm transition-colors ${!isReturningUser ? 'bg-white text-[#2D2B3E]' : 'text-[#8B86A3]'}`}
+                className={`type-label flex h-[37px] flex-1 items-center justify-center rounded-[var(--radius-full)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-auth-segment)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
+                  !isReturningUser ? 'bg-[var(--surface-base)] text-[var(--text-body-muted-4)] shadow-[var(--shadow-chip)] hover:bg-[var(--surface-base)]' : 'text-[var(--text-label)] hover:bg-[var(--surface-base-60)]'
+                }`}
               >
                 Sign up
               </button>
             </div>
 
-            <div className="space-y-3">
+            <div className="space-y-[var(--space-3)]">
               <div className="relative">
-                <label className="block text-xs text-[#8B86A3] mb-1">Username</label>
-                <User className="absolute left-3 top-[33px] w-4 h-4 text-[#A6A6A6]" />
+                <label htmlFor="login-username" className="type-label mb-[var(--space-2)] block text-[var(--text-label-2)]">
+                  Username
+                </label>
+                <User className="pointer-events-none absolute left-3 top-[32px] h-[15px] w-[15px] text-[var(--text-label-4)]" aria-hidden />
                 <input
+                  id="login-username"
                   type="text"
                   value={name}
                   onChange={(e) => setName(e.target.value)}
                   placeholder="Your name"
-                  className="w-full pl-9 pr-3 py-3 bg-[#F7F7F8] border border-[#ECECEC] rounded-xl text-[#2D2B3E] placeholder:text-[#B6B6B6] focus:border-[#696A8E] focus:ring-2 focus:ring-[#696A8E]/20 focus:outline-none transition-all"
+                  className={inputClass}
                   autoFocus
-                  onKeyPress={(e) => e.key === 'Enter' && canProceed && handleSubmit()}
+                  onKeyDown={(e) => e.key === 'Enter' && canProceed && handleSubmit()}
                 />
               </div>
 
               <div className="relative">
-                <label className="block text-xs text-[#8B86A3] mb-1">Password</label>
-                <Lock className="absolute left-3 top-[33px] w-4 h-4 text-[#A6A6A6]" />
+                <label htmlFor="login-password" className="type-label mb-[var(--space-2)] block text-[var(--text-label-2)]">
+                  Password
+                </label>
+                <Lock className="pointer-events-none absolute left-3 top-[32px] h-[15px] w-[15px] text-[var(--text-label-4)]" aria-hidden />
                 <input
+                  id="login-password"
                   type="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full pl-9 pr-3 py-3 bg-[#F7F7F8] border border-[#ECECEC] rounded-xl text-[#2D2B3E] placeholder:text-[#B6B6B6] focus:border-[#696A8E] focus:ring-2 focus:ring-[#696A8E]/20 focus:outline-none transition-all"
-                  onKeyPress={(e) => e.key === 'Enter' && canProceed && handleSubmit()}
+                  className={inputClass}
+                  onKeyDown={(e) => e.key === 'Enter' && canProceed && handleSubmit()}
                 />
               </div>
 
               {!isReturningUser && (
                 <div className="relative">
-                  <label className="block text-xs text-[#8B86A3] mb-1">Confirm password</label>
-                  <Lock className="absolute left-3 top-[33px] w-4 h-4 text-[#A6A6A6]" />
+                  <label htmlFor="login-confirm" className="type-label mb-[var(--space-2)] block text-[var(--text-label-2)]">
+                    Confirm password
+                  </label>
+                  <Lock className="pointer-events-none absolute left-3 top-[32px] h-[15px] w-[15px] text-[var(--text-label-4)]" aria-hidden />
                   <input
+                    id="login-confirm"
                     type="password"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm password"
-                    className="w-full pl-9 pr-3 py-3 bg-[#F7F7F8] border border-[#ECECEC] rounded-xl text-[#2D2B3E] placeholder:text-[#B6B6B6] focus:border-[#696A8E] focus:ring-2 focus:ring-[#696A8E]/20 focus:outline-none transition-all"
-                    onKeyPress={(e) => e.key === 'Enter' && canProceed && handleSubmit()}
+                    className={inputClass}
+                    onKeyDown={(e) => e.key === 'Enter' && canProceed && handleSubmit()}
                   />
                 </div>
               )}
             </div>
 
             {isReturningUser && (
-              <div className="text-right mt-2">
-                <button className="text-sm text-[#696A8E] hover:text-[#5A5B78]">Forgot password</button>
+              <div className="mt-[var(--space-2)] text-right">
+                <button type="button" className="type-caption text-[var(--text-caption-5)] transition-all duration-150 ease-out hover:text-[var(--accent-pill-dark)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-auth-card)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40">
+                  Forgot password
+                </button>
               </div>
             )}
 
@@ -223,35 +247,46 @@ const LoginFlow: React.FC<LoginFlowProps> = ({ onAuthSuccess, onGuestMode }) => 
                 initial={{ opacity: 0, y: 10 }}
                 animate={prefersReducedMotion ? { opacity: 1, y: 0 } : { opacity: 1, y: 0, x: [0, -4, 4, -2, 0] }}
                 transition={{ duration: 0.28 }}
-                className="mt-4 p-3 bg-red-50 border border-red-200 text-red-700 text-sm text-center rounded-xl"
+                className="type-caption mt-[var(--space-4)] rounded-[var(--radius-md)] border border-[var(--error-border-soft)] bg-[var(--error-bg-soft)] p-[var(--space-3)] text-center text-[var(--error-text)]"
               >
                 {error}
               </motion.div>
             )}
 
-            <div className="mt-6">
+            <div className="mt-[var(--space-5)]">
               <button
+                type="button"
                 onClick={handleSubmit}
                 disabled={!canProceed || isLoading}
-                className="w-full py-3 bg-[#101015] hover:bg-[#08080d] disabled:bg-gray-300 disabled:cursor-not-allowed text-white rounded-full font-medium transition-colors"
+                className={`type-body h-[48px] w-full rounded-[var(--radius-full)] font-semibold transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-auth-card)] active:scale-[0.97] ${
+                  canProceed && !isLoading
+                    ? 'bg-[var(--surface-auth-button)] text-white hover:bg-[var(--surface-auth-button-hover)]'
+                    : 'bg-[var(--surface-auth-button-disabled)] text-white/92'
+                } disabled:cursor-not-allowed disabled:opacity-40`}
               >
                 {isLoading ? (
-                  <div className="w-5 h-5 border-2 border-white/30 border-t-white animate-spin rounded-full mx-auto" />
-                ) : isReturningUser ? 'Login' : 'Sign Up'}
+                  <span className="inline-block w-5 h-5 border-2 border-white/30 border-t-white animate-spin rounded-full" />
+                ) : isReturningUser ? (
+                  'Login'
+                ) : (
+                  'Sign Up'
+                )}
               </button>
             </div>
 
-            <div className="mt-4 text-center">
+            <div className="mt-[var(--space-3)] text-center">
               <button
+                type="button"
                 onClick={onGuestMode}
                 disabled={isLoading}
-                className="text-sm text-[#4C4C4C] hover:text-[#111111] transition-colors font-medium"
+                className="type-body font-semibold text-[var(--text-body-muted-alt)] transition-all duration-150 ease-out hover:text-[var(--text-strong-alt)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-auth-card)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
               >
                 Try as Guest
               </button>
             </div>
           </div>
         </motion.div>
+
       </div>
     </div>
   );

@@ -228,11 +228,8 @@ export default function GameScreen({
   const yearGardenDays = generateYearGarden();
 
   return (
-    <div className="flex h-full flex-col" style={{ height: '100dvh', minHeight: '100dvh' }}>
-      <div 
-        className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))]"
-        style={{ minHeight: 0 }}
-      >
+    <div className="min-h-screen bg-gray-50">
+      <div className="px-4 py-6">
         <h2 className="mb-3 text-xs uppercase tracking-widest text-gray-400">Your Garden</h2>
         <h2 className="mb-0 font-serif text-[2.6rem] leading-tight text-[var(--text-strong-alt)]">Garden</h2>
         <p className="mb-6 mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">Your plant grows as you show up.</p>

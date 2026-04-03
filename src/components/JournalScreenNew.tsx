@@ -283,17 +283,16 @@ export default function JournalScreen({
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
-    <div className="flex flex-col" style={{ height: '100dvh', minHeight: '100dvh' }}>
-      {/* Header - pinned to top */}
-      <div className="shrink-0 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4">
+    <div className="min-h-screen bg-gray-50">
+      {/* Header */}
+      <div className="px-4 pt-4 pb-2 bg-white border-b">
         <h2 className="type-label mb-3 uppercase tracking-widest text-gray-400">TODAY'S REFLECTION</h2>
         <h2 className="mb-0 font-serif text-[2.6rem] leading-tight text-[var(--text-strong-alt)]">Journal</h2>
         <p className="mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">A few words go a long way.</p>
       </div>
 
-      {/* Middle content - flexible space that absorbs keyboard */}
-      <div className="flex flex-col" style={{ minHeight: 0 }}>
-        <div className="custom-scrollbar overflow-y-auto overscroll-y-contain px-4 py-8 transition-all duration-300 ease-out flex-1" style={{ paddingBottom: `${Math.max(128, keyboardHeight + 32)}px`, minHeight: 0 }}>
+      {/* Content */}
+      <div className="px-4 py-6" style={{ paddingBottom: `${keyboardHeight + 100}px` }}>
           {/* Prompt Card */}
           <div className="mb-5 rounded-2xl bg-white px-5 pb-5 pt-5 shadow-sm">
             {/* Editing indicator */}

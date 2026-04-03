@@ -212,47 +212,24 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
   const [isIntro, setIsIntro] = useState(true);
   const proximityStates = useRef<Map<string, { isNear: boolean, distance: number }>>(new Map());
 
-  // Generate strategic positions for plants along the entire perimeter
+  // Generate positions for plants in 4 corners of the screen
   useEffect(() => {
     const unlockedPlants = mockPlants.filter(plant => plant.unlocked);
     const w = window.innerWidth;
     const h = window.innerHeight;
+    const plantSize = 80;
+    const margin = 20; // margin from edges
     
-    // Define perimeter positions - all around the edges
-    const edgeMargin = 80; // Space from very edge
-    const plantSize = 80; // Scaled plant size (0.8x of 100)
-    
-    // Calculate positions around the entire perimeter
-    const perimeterPositions: { x: number; y: number }[] = [];
-    
-    // Top left area (avoiding header title)
-    perimeterPositions.push({ x: edgeMargin, y: edgeMargin + 60 });
-    perimeterPositions.push({ x: edgeMargin + plantSize + 20, y: edgeMargin + 40 });
-    
-    // Top right area (avoiding music dropdown)
-    perimeterPositions.push({ x: w - edgeMargin - plantSize, y: edgeMargin + 60 });
-    perimeterPositions.push({ x: w - edgeMargin - plantSize * 2 - 20, y: edgeMargin + 40 });
-    
-    // Bottom left area (near play button)
-    const bottomY = h - edgeMargin - plantSize - 80; // Above bottom nav
-    perimeterPositions.push({ x: edgeMargin, y: bottomY });
-    perimeterPositions.push({ x: edgeMargin + plantSize + 20, y: bottomY + 20 });
-    
-    // Bottom right area (near coffee button)
-    perimeterPositions.push({ x: w - edgeMargin - plantSize, y: bottomY });
-    perimeterPositions.push({ x: w - edgeMargin - plantSize * 2 - 20, y: bottomY + 20 });
-    
-    // Left side middle
-    const leftMiddleY = h * 0.35;
-    perimeterPositions.push({ x: edgeMargin, y: leftMiddleY });
-    perimeterPositions.push({ x: edgeMargin, y: leftMiddleY + plantSize + 30 });
-    
-    // Right side middle
-    perimeterPositions.push({ x: w - edgeMargin - plantSize, y: leftMiddleY });
-    perimeterPositions.push({ x: w - edgeMargin - plantSize, y: leftMiddleY + plantSize + 30 });
+    // Define the 4 corners
+    const cornerPositions = [
+      { x: margin, y: 160 }, // Top left (below header)
+      { x: w - plantSize - margin, y: 160 }, // Top right (below header)
+      { x: margin, y: h - plantSize - 180 }, // Bottom left (above controls)
+      { x: w - plantSize - margin, y: h - plantSize - 180 }, // Bottom right (above controls)
+    ];
     
     const positions: PlantPosition[] = unlockedPlants.map((plant, index) => {
-      const position = perimeterPositions[index % perimeterPositions.length] || { x: edgeMargin, y: h * 0.4 };
+      const position = cornerPositions[index % 4];
       return { plant, position };
     });
     

@@ -162,11 +162,11 @@ export default function TaskHistoryScreen({
   const selectedHasContent = selectedEntries.journal.length > 0 || selectedEntries.tasks.length > 0;
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-24 pt-4">
+    <div className="flex flex-col min-h-screen pb-20">
+      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-24 pt-6">
         <h2 className="mb-3 text-xs uppercase tracking-widest text-gray-400">YOUR LOG</h2>
         {/* Header */}
-        <h2 className="mb-0 font-serif text-[2.6rem] leading-none text-[var(--text-strong-alt)]">Log</h2>
+        <h2 className="mb-0 mt-1 font-serif text-[2.6rem] leading-tight text-[var(--text-strong-alt)]">Log</h2>
         <p className="mb-6 mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">Tap a date to revisit your day.</p>
 
         <div className="mb-6 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-base-85)] px-5 py-5 shadow-sm backdrop-blur-sm">

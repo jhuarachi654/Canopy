@@ -48,7 +48,7 @@ export default function NavigationBar({
 
   return (
     <div
-      className="absolute bottom-0 left-0 right-0 z-50 flex items-center justify-center"
+      className="fixed bottom-0 left-0 right-0 z-[100] h-20 flex items-center justify-center bg-transparent"
       style={{
         paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))',
         paddingTop: '1rem',

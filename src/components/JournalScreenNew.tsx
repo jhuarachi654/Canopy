@@ -227,12 +227,12 @@ export default function JournalScreen({
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
-    <div className="flex h-full flex-col">
+    <div className="flex flex-col h-[calc(100dvh-180px)]">
       {/* Main Content */}
-      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-4">
+      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-[calc(7rem+env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
         {/* Header */}
         <h2 className="type-label mb-3 uppercase tracking-widest text-gray-400">TODAY'S REFLECTION</h2>
-        <h2 className="mb-0 font-serif text-[2.6rem] leading-none text-[var(--text-strong-alt)]">Journal</h2>
+        <h2 className="mb-0 font-serif text-[2.6rem] leading-tight text-[var(--text-strong-alt)]">Journal</h2>
         <p className="mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">A few words go a long way.</p>
 
         {/* Prompt Card */}

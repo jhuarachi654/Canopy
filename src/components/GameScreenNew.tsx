@@ -8,7 +8,7 @@ import JournalEntryDetailView from './JournalEntryDetailView';
 import quietFernImg from 'figma:asset/7438a9d659ebf123bfbcca1916fe079babb35132.png';
 import wildCloverImg from 'figma:asset/4c899badb6a576e6df75d3cb576969dd9e07298d.png';
 import roseMossImg from 'figma:asset/34ec7cd771dafa77769204ece804cb31dcd57a39.png';
-import blueSageImg from 'figma:asset/98636990ae62d87883607d3992be74e4cfde2eee.png';
+import blueSageImg from '../assets/blue-sage-new.png';
 
 // Import pixelated grass background
 import grassTexture from 'figma:asset/efb1d6fe14114965e2db541fd29beb0dca2527d6.png';
@@ -84,7 +84,7 @@ export default function GameScreen({
     'blue-sage': {
       name: 'Blue Sage',
       image: blueSageImg,
-      unlockLevel: 15,
+      unlockLevel: 4,
     },
   };
 
@@ -246,15 +246,12 @@ export default function GameScreen({
   const yearGardenDays = generateYearGarden();
 
   return (
-    <div className="flex h-full flex-col">
-      <motion.div 
-        className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-24 pt-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.3 }}
+    <div className="flex h-full flex-col min-h-0">
+      <div 
+        className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))]"
       >
         <h2 className="mb-3 text-xs uppercase tracking-widest text-gray-400">Your Garden</h2>
-        <h2 className="mb-0 font-serif text-[2.6rem] leading-none text-[var(--text-strong-alt)]">Garden</h2>
+        <h2 className="mb-0 font-serif text-[2.6rem] leading-tight text-[var(--text-strong-alt)]">Garden</h2>
         <p className="mb-6 mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">Your plant grows as you show up.</p>
         
         {/* Plant Card */}
@@ -281,8 +278,8 @@ export default function GameScreen({
               
               {/* Plant positions on the field */}
               <div className="absolute inset-0 flex items-end justify-center gap-6 pb-6">
-                {/* Left plant (if level 10+) */}
-                {playerProgress.level >= 10 && (
+                {/* Left plant (if level 3+) */}
+                {playerProgress.level >= 3 && (
                   <motion.div 
                     className="relative" 
                     style={{ marginBottom: '0px' }}
@@ -330,15 +327,15 @@ export default function GameScreen({
                   <img 
                     src={currentPlant.image} 
                     alt={currentPlant.name}
-                    className="pixelated w-24 h-auto drop-shadow-xl"
+                    className="pixelated w-18 h-auto drop-shadow-xl"
                     style={{
                       imageRendering: 'pixelated',
                     }}
                   />
                 </motion.div>
                 
-                {/* Right plant (if level 5+) */}
-                {playerProgress.level >= 5 && (
+                {/* Right plant (if level 2+) */}
+                {playerProgress.level >= 2 && (
                   <motion.div 
                     className="relative" 
                     style={{ marginBottom: '0px' }}
@@ -464,7 +461,7 @@ export default function GameScreen({
               <motion.div
                 className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
                   hasJournaledToday
-                    ? 'bg-gradient-to-br from-[var(--accent-watered-start)] to-[var(--text-caption-2)]'
+                    ? 'bg-[var(--accent-teal)]'
                     : 'border-2 border-[var(--border-soft)] bg-[var(--surface-base)]'
                 }`}
                 animate={{ 
@@ -529,7 +526,7 @@ export default function GameScreen({
               <motion.div
                 className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
                   completedTasksToday >= 2
-                    ? 'bg-gradient-to-br from-[var(--accent-watered-start)] to-[var(--text-caption-2)]'
+                    ? 'bg-[var(--accent-teal)]'
                     : 'border-2 border-[var(--border-soft)] bg-[var(--surface-base)]'
                 }`}
                 animate={{ 
@@ -577,7 +574,7 @@ export default function GameScreen({
               </div>
               <motion.div
                 className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
-                  focusModeToday ? 'bg-gradient-to-br from-[var(--accent-watered-start)] to-[var(--text-caption-2)]' : 'border-2 border-[var(--border-soft)] bg-[var(--surface-base)]'
+                  focusModeToday ? 'bg-[var(--accent-teal)]' : 'border-2 border-[var(--border-soft)] bg-[var(--surface-base)]'
                 }`}
               >
                 {focusModeToday && (
@@ -600,7 +597,7 @@ export default function GameScreen({
               </div>
               <motion.div
                 className={`flex h-8 w-8 items-center justify-center rounded-full transition-all ${
-                  didTwoMinuteReset ? 'bg-gradient-to-br from-[var(--accent-watered-start)] to-[var(--text-caption-2)]' : 'border-2 border-[var(--border-soft)] bg-[var(--surface-base)]'
+                  didTwoMinuteReset ? 'bg-[var(--accent-teal)]' : 'border-2 border-[var(--border-soft)] bg-[var(--surface-base)]'
                 }`}
               >
                 {didTwoMinuteReset && (
@@ -662,11 +659,11 @@ export default function GameScreen({
                   {/* Selected state is shown by border styling only */}
                   
                   {/* Plant image */}
-                  <div className="mb-3 flex aspect-square items-center justify-center overflow-hidden rounded-2xl bg-gradient-to-br from-[var(--surface-card-subtle-6)] to-[var(--surface-card-subtle-7)]">
+                  <div className="mb-3 flex aspect-square items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--surface-card-subtle-6)] to-[var(--surface-card-subtle-7)] p-4">
                     <motion.img
                       src={plant.image}
                       alt={plant.name}
-                      className="pixelated w-16 h-auto"
+                      className="pixelated h-full w-auto object-contain"
                       style={{
                         imageRendering: 'pixelated',
                         filter: isUnlocked ? 'none' : 'grayscale(100%) brightness(0.5)',
@@ -697,15 +694,7 @@ export default function GameScreen({
         </motion.div>
 
         {/* Garden Reflection Input */}
-        
-
-        {/* Restart Journey Button */}
-        <div className="flex justify-center mb-8">
-          <button className="text-sm text-gray-400 hover:text-gray-600 transition-colors">
-            Restart journey
-          </button>
-        </div>
-      </motion.div>
+      </div>
 
       {/* Journal Entry Detail View Modal */}
       {showDetailView && selectedDate && (

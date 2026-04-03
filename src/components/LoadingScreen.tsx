@@ -1,5 +1,5 @@
-import React from 'react';
-import { motion, useReducedMotion } from 'motion/react';
+import React, { useState } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import svgPaths from '../imports/Frame47296-1/svg-0hdeo07ddu';
 import CanopyScreenBackground from './CanopyScreenBackground';
 
@@ -10,8 +10,36 @@ interface LoadingScreenProps {
 
 export default function LoadingScreen({ onLoadingComplete }: LoadingScreenProps) {
   const prefersReducedMotion = useReducedMotion();
-  const handleEnter = () => {
-    onLoadingComplete();
+  const [isPressed, setIsPressed] = useState(false);
+  const [slideProgress, setSlideProgress] = useState(0);
+  const [isComplete, setIsComplete] = useState(false);
+  
+  const handleMouseDown = () => {
+    setIsPressed(true);
+  };
+  
+  const handleMouseUp = () => {
+    if (slideProgress > 0.8) {
+      // Slid far enough - complete
+      setIsComplete(true);
+      setTimeout(() => {
+        onLoadingComplete();
+      }, 300);
+    } else {
+      // Didn't slide far enough - reset
+      setIsPressed(false);
+      setSlideProgress(0);
+    }
+  };
+  
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (!isPressed) return;
+    
+    const button = e.currentTarget;
+    const rect = button.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const progress = Math.min(Math.max(x / rect.width, 0), 1);
+    setSlideProgress(progress);
   };
 
   return (
@@ -71,21 +99,44 @@ export default function LoadingScreen({ onLoadingComplete }: LoadingScreenProps)
           transition={{ duration: 0.8, delay: 0.4 }}
         >
           <motion.button
-            onClick={handleEnter}
-            className="mb-4 w-full max-w-[248px] rounded-full border border-white/10 bg-[#2D2B3E] px-10 py-4 text-lg font-light text-white shadow-lg transition-colors hover:bg-[#232136]"
+            onMouseDown={handleMouseDown}
+            onMouseUp={handleMouseUp}
+            onMouseMove={handleMouseMove}
+            onMouseLeave={handleMouseUp}
+            className={`mb-4 w-full max-w-[248px] rounded-full border border-white/10 bg-[#2D2B3E] px-10 py-4 text-lg font-light text-white shadow-lg transition-all duration-200 cursor-pointer select-none overflow-hidden relative ${
+              isPressed ? 'scale-95' : 'hover:bg-[#232136]'
+            }`}
             whileHover={prefersReducedMotion ? {} : { scale: 1.05 }}
             whileTap={prefersReducedMotion ? {} : { scale: 0.95 }}
+            animate={{
+              backgroundColor: isComplete ? '#10B981' : '#2D2B3E',
+            }}
+            transition={{ duration: 0.3 }}
           >
-            Start growing
+            {/* Progress fill */}
+            <motion.div 
+              className="absolute top-0 left-0 h-full bg-white/20 rounded-full"
+              style={{ width: `${slideProgress * 100}%` }}
+              transition={{ duration: 0.1 }}
+            />
+            
+            {/* Slider thumb */}
+            <motion.div 
+              className="absolute top-1/2 w-8 h-8 bg-white rounded-full shadow-lg flex items-center justify-center"
+              style={{ 
+                left: `${slideProgress * 100}%`,
+                transform: 'translate(-50%, -50%)'
+              }}
+              transition={{ duration: 0.1 }}
+            >
+              <span className="text-[#2D2B3E] text-sm">→</span>
+            </motion.div>
+            
+            {/* Text */}
+            <span className={`transition-opacity duration-200 ${slideProgress > 0.3 ? 'opacity-0' : 'opacity-100'}`}>
+              {isComplete ? 'Welcome!' : 'Slide to begin →'}
+            </span>
           </motion.button>
-
-          <motion.div
-            className="text-center"
-            animate={{ opacity: [0.5, 0.8, 0.5] }}
-            transition={{ duration: 2, repeat: Infinity, ease: 'easeInOut' }}
-          >
-            <p className="text-sm font-light text-white/70">I already have an account</p>
-          </motion.div>
         </motion.div>
       </div>
     </motion.div>

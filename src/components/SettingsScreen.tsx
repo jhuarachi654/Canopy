@@ -77,8 +77,8 @@ export default function SettingsScreen({
   const plantName = currentLevelInfo?.title || "Getting Started";
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-24 pt-4">
+    <div className="flex flex-col min-h-screen pb-20">
+      <div className="px-4 pt-4">
         <h2 className="mb-6 font-serif text-4xl text-gray-900">Profile</h2>
 
         {/* Profile header */}
@@ -162,9 +162,6 @@ export default function SettingsScreen({
           >
             {isGuestMode ? 'Exit guest' : 'Log out'}
           </button>
-          <p className="mt-3 text-center text-xs text-[var(--text-caption-2)]">
-            Level {playerProgress.level} · {plantName}
-          </p>
         </div>
       </div>
     </div>

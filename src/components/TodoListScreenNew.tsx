@@ -1,16 +1,20 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { Plus, Check, X, Target, Timer, MoreHorizontal } from 'lucide-react';
+import { Plus, Check, X, Timer, MoreHorizontal } from 'lucide-react';
 import { createPortal } from 'react-dom';
 import { toast } from 'sonner';
 import type { Todo } from '../App';
 import type { CanopyPriorityTag } from '../lib/canopyPriorityTags';
+import DateTimePickerModal from './DateTimePickerModal';
+import FocusTaskModal from './FocusTaskModal';
+import FocusTaskScreen from './FocusTaskScreen';
 
 const FOCUS_MODE_STORAGE_KEY = 'lifelevel-focus-mode';
 const FOCUS_MODE_UPDATED_EVENT = 'canopy-focus-mode-updated';
 
 interface TodoListScreenProps {
   todos: Todo[];
+  userName?: string;
   onAddTodo: (text: string, isFirstTime?: boolean) => void;
   onToggleTodo: (id: string) => void;
   onEditTodo: (id: string, newText: string) => void;
@@ -21,6 +25,7 @@ interface TodoListScreenProps {
 
 export default function TodoListScreen({
   todos,
+  userName,
   onAddTodo,
   onToggleTodo,
   onEditTodo,
@@ -48,15 +53,25 @@ export default function TodoListScreen({
   const [dueDateByTask, setDueDateByTask] = useState<Record<string, string | undefined>>({});
   const [focusPromptFor, setFocusPromptFor] = useState<string | null>(null);
   const [focusSelectionIds, setFocusSelectionIds] = useState<string[]>([]);
+  const hasInitializedFocus = useRef(false);
   const [focusSelectionLocked, setFocusSelectionLocked] = useState(false);
   const [showFocusSelectionOverlay, setShowFocusSelectionOverlay] = useState(false);
+  const [showDateTimePicker, setShowDateTimePicker] = useState(false);
+  const [dateTimeDisplay, setDateTimeDisplay] = useState('');
+  
+  // Focus Task Mode state
+  const [showFocusTaskModal, setShowFocusTaskModal] = useState(false);
+  const [focusTaskTodo, setFocusTaskTodo] = useState<Todo | null>(null);
+  const [showFocusTaskScreen, setShowFocusTaskScreen] = useState(false);
+  const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
+  const [longPressTask, setLongPressTask] = useState<Todo | null>(null);
 
   const [focusMode, setFocusMode] = useState<boolean>(() => {
     try {
       const stored = localStorage.getItem(FOCUS_MODE_STORAGE_KEY);
-      return stored ? JSON.parse(stored) : true;
+      return stored ? JSON.parse(stored) : false; // Default to OFF
     } catch {
-      return true;
+      return false;
     }
   });
 
@@ -97,6 +112,7 @@ export default function TodoListScreen({
 
   useEffect(() => {
     if (!focusMode) {
+      hasInitializedFocus.current = false;
       setFocusSelectionIds([]);
       setFocusSelectionLocked(false);
       setShowFocusSelectionOverlay(false);
@@ -133,10 +149,41 @@ export default function TodoListScreen({
     if (due) {
       const [datePart, timePart] = due.split('T');
       setNewTodoDueDate(datePart || '');
-      setNewTodoDueTime(timePart?.slice(0, 5) || '');
+      setNewTodoDueTime(timePart || '');
+      
+      // Create display string for existing date/time
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const dueDate = new Date(datePart);
+      dueDate.setHours(0, 0, 0, 0);
+      
+      const diffDays = Math.floor((dueDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+      let displayDate = '';
+      if (diffDays === -1) displayDate = 'Yesterday';
+      else if (diffDays === 0) displayDate = 'Today';
+      else if (diffDays === 1) displayDate = 'Tomorrow';
+      else {
+        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        displayDate = `${dayNames[dueDate.getDay()]} ${monthNames[dueDate.getMonth()]} ${dueDate.getDate()}`;
+      }
+      
+      if (timePart) {
+        const [hourStr, minuteStr] = timePart.split(':');
+        let hour = parseInt(hourStr, 10);
+        const minute = parseInt(minuteStr, 10);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        if (hour > 12) hour -= 12;
+        if (hour === 0) hour = 12;
+        
+        setDateTimeDisplay(`${displayDate}, ${hour}:${minute.toString().padStart(2, '0')} ${ampm}`);
+      } else {
+        setDateTimeDisplay(displayDate);
+      }
     } else {
       setNewTodoDueDate('');
       setNewTodoDueTime('');
+      setDateTimeDisplay('');
     }
     setShowCreateSheet(true);
   };
@@ -144,6 +191,37 @@ export default function TodoListScreen({
   const closeTaskSheet = () => {
     setShowCreateSheet(false);
     setEditingTodoId(null);
+    setDateTimeDisplay('');
+  };
+
+  // Focus Task Mode handlers
+  const handleLongPressStart = (todo: Todo) => {
+    if (todo.completed) return;
+    
+    setLongPressTask(todo);
+    const timer = setTimeout(() => {
+      setFocusTaskTodo(todo);
+      setShowFocusTaskModal(true);
+    }, 500); // 500ms long press
+    setLongPressTimer(timer);
+  };
+
+  const handleLongPressEnd = () => {
+    if (longPressTimer) {
+      clearTimeout(longPressTimer);
+      setLongPressTimer(null);
+    }
+    setLongPressTask(null);
+  };
+
+  const handleFocusTaskConfirm = (targetTime?: number) => {
+    setShowFocusTaskModal(false);
+    setShowFocusTaskScreen(true);
+  };
+
+  const handleFocusTaskClose = () => {
+    setShowFocusTaskScreen(false);
+    setFocusTaskTodo(null);
   };
 
   const incompleteTodos = visibleTodos.filter((todo) => !todo.completed);
@@ -162,9 +240,12 @@ export default function TodoListScreen({
   );
 
   useEffect(() => {
-    if (!focusMode || focusSelectionIds.length > 0) return;
-    setFocusSelectionIds(rankedIncompleteTodos.slice(0, 3).map((t) => t.id));
-  }, [focusMode, rankedIncompleteTodos, focusSelectionIds.length]);
+    if (!focusMode || hasInitializedFocus.current) return;
+    if (rankedIncompleteTodos.length > 0) {
+      hasInitializedFocus.current = true;
+      setFocusSelectionIds(rankedIncompleteTodos.slice(0, 3).map((t) => t.id));
+    }
+  }, [focusMode, rankedIncompleteTodos]);
 
   const focusSelectedSet = new Set(focusSelectionIds);
   const focusModeLimitedTodos = focusMode
@@ -213,6 +294,12 @@ export default function TodoListScreen({
       e.preventDefault();
       handleSubmitNewTask();
     }
+  };
+
+  const handleDateTimeSelect = (dateTime: { date: string; time: string; display: string }) => {
+    setNewTodoDueDate(dateTime.date);
+    setNewTodoDueTime(dateTime.time);
+    setDateTimeDisplay(dateTime.display);
   };
 
   const handleToggle = (id: string, completed: boolean) => {
@@ -278,8 +365,8 @@ export default function TodoListScreen({
 
   return (
     <div className={`relative flex h-full flex-col ${showCreateSheet ? 'z-[80]' : 'z-0'}`}>
-      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-[var(--space-4)] pb-24 pt-4">
-        <h2 className="mb-3 text-xs uppercase tracking-widest text-gray-400">Hi Johanna</h2>
+      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-[var(--space-4)] pb-24 pt-4 relative z-10">
+        <h2 className="mb-3 text-xs uppercase tracking-widest text-gray-400">Hi {userName || 'there'}</h2>
         <div className="mb-6 flex items-center justify-between">
           <div>
             <h2 className="mb-0 font-serif text-[2.6rem] leading-none text-gray-900">Tasks</h2>
@@ -296,7 +383,6 @@ export default function TodoListScreen({
             aria-label="Toggle focus mode"
             aria-pressed={focusMode}
           >
-            <Target className={`h-[14px] w-[14px] ${focusMode ? 'text-[var(--accent-teal)]' : 'text-[var(--text-caption-2)]'}`} />
             <span className={`text-[12px] font-medium ${focusMode ? 'text-[var(--accent-teal-deep)]' : 'text-[var(--text-body-muted-2)]'}`}>
               Focus mode
             </span>
@@ -347,6 +433,13 @@ export default function TodoListScreen({
                     transition={{ duration: 0.28 }}
                     className="relative rounded-[var(--radius-md)] border border-[var(--border-soft-panel-3)] bg-[var(--surface-base)] p-[var(--space-3)] shadow-[var(--shadow-card-soft)]"
                     drag={!todo.completed && activeFilter === 'todo' ? true : false}
+                    onPointerDown={() => handleLongPressStart(todo)}
+                    onPointerUp={handleLongPressEnd}
+                    onPointerLeave={handleLongPressEnd}
+                    style={{ 
+                      cursor: longPressTask?.id === todo.id ? 'pointer' : 'default',
+                      backgroundColor: longPressTask?.id === todo.id ? 'var(--surface-hover-panel)' : undefined
+                    }}
                     dragConstraints={{ left: -140, right: 0, top: 0, bottom: 0 }}
                     dragElastic={0.06}
                     onDragEnd={(_, info) => {
@@ -371,7 +464,7 @@ export default function TodoListScreen({
                       }
                     }}
                   >
-                    <div className="flex items-start gap-[var(--space-3)]">
+                    <div className="flex items-center gap-[var(--space-3)]">
                       <motion.button
                         type="button"
                         onClick={() => handleToggle(todo.id, todo.completed)}
@@ -530,7 +623,7 @@ export default function TodoListScreen({
                     }}
                   />
                   <motion.div
-                    className="fixed inset-x-4 top-[max(env(safe-area-inset-top),6rem)] z-[146] rounded-[var(--radius-lg)] border border-[var(--border-soft)] bg-[var(--surface-base)] p-[var(--space-4)] shadow-[var(--shadow-card-soft)]"
+                    className="fixed left-4 right-4 top-1/2 z-[146] max-w-md -translate-y-1/2 transform mx-auto rounded-[var(--radius-lg)] border border-[var(--border-soft)] bg-[var(--surface-base)] p-[var(--space-4)] shadow-[var(--shadow-card-soft)]"
                     initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
@@ -553,7 +646,7 @@ export default function TodoListScreen({
                             key={todo.id}
                             type="button"
                             onClick={() => toggleFocusSelection(todo.id)}
-                            className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] px-3 py-2 text-left"
+                            className="flex w-full items-center gap-3 rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] px-3 h-14 text-left"
                           >
                             <span
                               className={`flex h-5 w-5 items-center justify-center rounded-[var(--radius-full)] border ${
@@ -603,46 +696,42 @@ export default function TodoListScreen({
                     exit={{ y: '100%' }}
                     transition={prefersReducedMotion ? { duration: 0.2 } : { type: 'spring', stiffness: 360, damping: 32, duration: 0.25 }}
                   >
-              <div className="mx-auto mb-3 h-1.5 w-10 rounded-[var(--radius-full)] bg-[var(--border-soft)]" />
-              <h3 className="mb-3 font-serif text-xl text-[var(--text-strong-alt)]">{editingTodoId ? 'Edit Task' : 'New Task'}</h3>
-              <input
-                type="text"
-                value={newTodoText}
-                onChange={(e) => setNewTodoText(e.target.value)}
-                placeholder="Task title"
-                className="mb-3 w-full border-0 border-b border-[var(--border-soft)] bg-transparent pb-2 text-[var(--text-strong-alt)] outline-none focus:border-[var(--accent-teal)]"
-                autoFocus
-              />
-              <textarea
-                value={newTodoNotes}
-                onChange={(e) => setNewTodoNotes(e.target.value)}
-                placeholder="Notes"
-                rows={3}
-                className="mb-3 w-full resize-none border-0 border-b border-[var(--border-soft)] bg-transparent pb-2 text-[var(--text-strong-alt)] outline-none focus:border-[var(--accent-teal)]"
-              />
-              <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-caption-2)]">Due</p>
-              <div className="mb-4 grid grid-cols-2 gap-2">
-                <input
-                  type="date"
-                  value={newTodoDueDate}
-                  onChange={(e) => setNewTodoDueDate(e.target.value)}
-                  className="w-full rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] px-3 py-2 text-sm text-[var(--text-strong-alt)] outline-none transition-all duration-150 ease-out focus:border-[var(--accent-teal)] focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-accent-25)]"
-                />
-                <input
-                  type="time"
-                  value={newTodoDueTime}
-                  onChange={(e) => setNewTodoDueTime(e.target.value)}
-                  className="w-full rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] px-3 py-2 text-sm text-[var(--text-strong-alt)] outline-none transition-all duration-150 ease-out focus:border-[var(--accent-teal)] focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-accent-25)]"
-                />
-              </div>
-              <button
-                type="button"
-                onClick={handleSubmitNewTask}
-                disabled={!newTodoText.trim()}
-                className="h-12 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-sm font-medium text-white disabled:opacity-50"
-              >
-                {editingTodoId ? 'Save Changes' : 'Create Task'}
-              </button>
+                    <div className="mx-auto mb-3 h-1.5 w-10 rounded-[var(--radius-full)] bg-[var(--border-soft)]" />
+                    <h3 className="mb-3 font-serif text-xl text-[var(--text-strong-alt)]">{editingTodoId ? 'Edit Task' : 'New Task'}</h3>
+                    <input
+                      type="text"
+                      value={newTodoText}
+                      onChange={(e) => setNewTodoText(e.target.value)}
+                      placeholder="Task title"
+                      className="mb-3 w-full border-0 border-b border-[var(--border-soft)] bg-transparent pb-2 text-[var(--text-strong-alt)] outline-none focus:border-[var(--accent-teal)]"
+                      autoFocus
+                    />
+                    <textarea
+                      value={newTodoNotes}
+                      onChange={(e) => setNewTodoNotes(e.target.value)}
+                      placeholder="Notes"
+                      rows={3}
+                      className="mb-3 w-full resize-none border-0 border-b border-[var(--border-soft)] bg-transparent pb-2 text-[var(--text-strong-alt)] outline-none focus:border-[var(--accent-teal)]"
+                    />
+                    <p className="mb-2 text-xs font-medium uppercase tracking-wide text-[var(--text-caption-2)]">Due</p>
+                    <div className="mb-4">
+                      <input
+                        type="text"
+                        value={dateTimeDisplay}
+                        readOnly
+                        onClick={() => setShowDateTimePicker(true)}
+                        placeholder=""
+                        className="w-full h-11 rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] px-3 text-sm text-[var(--text-strong-alt)] outline-none transition-all duration-150 ease-out focus:border-[var(--accent-teal)] focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-accent-25)] cursor-pointer placeholder:text-[var(--text-placeholder)]"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleSubmitNewTask}
+                      disabled={!newTodoText.trim()}
+                      className="h-12 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-sm font-medium text-white disabled:opacity-50"
+                    >
+                      {editingTodoId ? 'Save Changes' : 'Create Task'}
+                    </button>
                   </motion.div>
                 </>
               )}
@@ -650,6 +739,29 @@ export default function TodoListScreen({
             overlayRoot
           )
         : null}
+      
+      <DateTimePickerModal
+        isOpen={showDateTimePicker}
+        onClose={() => setShowDateTimePicker(false)}
+        onSelect={handleDateTimeSelect}
+        initialDateTime={newTodoDueDate && newTodoDueTime ? { date: newTodoDueDate, time: newTodoDueTime } : undefined}
+      />
+
+      {/* Focus Task Mode Modal */}
+      <FocusTaskModal
+        isOpen={showFocusTaskModal}
+        onClose={() => setShowFocusTaskModal(false)}
+        onConfirm={handleFocusTaskConfirm}
+        todo={focusTaskTodo}
+      />
+
+      {/* Focus Task Screen */}
+      {showFocusTaskScreen && focusTaskTodo && (
+        <FocusTaskScreen
+          todo={focusTaskTodo}
+          onClose={handleFocusTaskClose}
+        />
+      )}
     </div>
   );
 }

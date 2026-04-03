@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import svgPaths from '../imports/Frame47296-1/svg-0hdeo07ddu';
-import { Check, ChevronLeft } from 'lucide-react';
+import { Check, ChevronLeft, Target, Lightbulb } from 'lucide-react';
 
 // Plant images for selection screen
 import quietFernImg from 'figma:asset/7438a9d659ebf123bfbcca1916fe079babb35132.png';
 import wildCloverImg from 'figma:asset/4c899badb6a576e6df75d3cb576969dd9e07298d.png';
 import roseMossImg from 'figma:asset/34ec7cd771dafa77769204ece804cb31dcd57a39.png';
-import blueSageImg from 'figma:asset/98636990ae62d87883607d3992be74e4cfde2eee.png';
+import blueSageImg from '../assets/blue-sage-new.png';
 import CanopyScreenBackground from './CanopyScreenBackground';
 
 const FOCUS_MODE_STORAGE_KEY = 'lifelevel-focus-mode';
@@ -24,6 +24,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [userFeeling, setUserFeeling] = useState('');
   const [focusMode, setFocusMode] = useState(true);
   const [selectedPlant, setSelectedPlant] = useState('quiet-fern');
+  const [isLoading, setIsLoading] = useState(false);
 
   const plants = [
     {
@@ -53,15 +54,26 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   ];
 
   const handleNext = () => {
+    console.log('Current step:', currentStep, 'Loading state:', isLoading);
+    
+    // Prevent multiple clicks during loading
+    if (isLoading) {
+      console.log('Ignoring click - already loading');
+      return;
+    }
+    
+    // All steps should be instant for better UX
     if (currentStep === 3) {
-      // Save preferences to localStorage
+      // Save preferences to localStorage instantly
       localStorage.setItem('lifelevel-user-name', userName);
       localStorage.setItem('lifelevel-user-feeling', userFeeling);
-      localStorage.setItem(FOCUS_MODE_STORAGE_KEY, JSON.stringify(focusMode));
+      localStorage.setItem('lifelevel-focus-mode', focusMode.toString());
       localStorage.setItem('lifelevel-selected-plant', selectedPlant);
-      window.dispatchEvent(new Event(FOCUS_MODE_UPDATED_EVENT));
+      
+      // Complete onboarding instantly
       onComplete();
     } else {
+      // Move to next step instantly
       setCurrentStep(currentStep + 1);
     }
   };
@@ -159,23 +171,21 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   Just two quick things, then you&apos;re in.
                 </p>
 
-                <div className="mb-[var(--space-4)] w-full rounded-[var(--radius-lg)] bg-[var(--surface-base)] px-[var(--space-6)] pb-[var(--space-5)] pt-[var(--space-6)] shadow-sm">
-                  <label
-                    htmlFor="onboard-name"
-                    className="type-label mb-[var(--space-3)] block uppercase tracking-wider text-[var(--text-caption-3)]"
-                  >
-                    YOUR NAME
-                  </label>
-                  <input
-                    id="onboard-name"
-                    type="text"
-                    value={userName}
-                    onChange={(e) => setUserName(e.target.value)}
-                    placeholder="Name"
-                    className="type-body w-full border-0 border-b border-[var(--border-soft-panel)] bg-transparent p-0 pb-[var(--space-2)] text-[var(--text-strong)] outline-none transition-all duration-150 ease-out placeholder:text-[var(--text-placeholder)] focus:border-[var(--border-soft)] focus:shadow-none"
-                    autoFocus
-                  />
-                </div>
+                <label
+                  htmlFor="onboard-name"
+                  className="type-label mb-[var(--space-3)] block uppercase tracking-wider text-[var(--text-caption-3)]"
+                >
+                  YOUR NAME
+                </label>
+                <input
+                  id="onboard-name"
+                  type="text"
+                  value={userName}
+                  onChange={(e) => setUserName(e.target.value)}
+                  placeholder="Name"
+                  className="type-body mb-[var(--space-6)] w-full rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] p-3 text-[var(--text-strong-alt)] outline-none transition-all duration-150 ease-out placeholder:text-[var(--text-placeholder)] focus:border-[var(--accent-teal)] focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-accent-25)]"
+                  autoFocus
+                />
 
                 <button
                   type="button"
@@ -242,22 +252,45 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
             {/* Step 3: Focus mode */}
             {currentStep === 2 && (
               <div className="flex w-full flex-col items-stretch pt-[var(--space-2)] text-left">
-                <h2 className="type-headline mb-[var(--space-2)] italic text-[var(--text-strong)]">One last thing.</h2>
+                <h2 className="type-headline mb-[var(--space-2)] italic text-[var(--text-strong)]">Stay focused.</h2>
                 <p className="type-body mb-[var(--space-6)] italic text-[var(--text-caption-6)]">
-                  You can always change this later.
+                  Two ways to stay on track.
                 </p>
 
-                <div className="mb-[var(--space-6)] rounded-[var(--radius-lg)] border border-[var(--border-soft)] bg-[var(--surface-base)] p-[var(--space-6)]">
+                {/* Card 1: Deep Focus (Timer) */}
+                <div className="mb-[var(--space-4)] rounded-[var(--radius-lg)] border border-[var(--border-soft)] bg-[var(--surface-base)] p-[var(--space-5)]">
+                  <div className="mb-[var(--space-3)]">
+                    <h3 className="type-body font-semibold text-[var(--text-strong)]">Deep Focus</h3>
+                    <p className="type-caption text-[var(--text-caption-6)]">
+                      Timer for individual tasks
+                    </p>
+                  </div>
+                  
+                  {/* Demo task card */}
+                  <div className="mb-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border-soft)] bg-[var(--surface-base-60)] p-[var(--space-3)]">
+                    <div className="flex items-center gap-3">
+                      <span className="type-body text-[var(--text-strong)]">Call the dentist</span>
+                      <span className="ml-auto type-caption text-[var(--text-caption-2)]">25:00</span>
+                    </div>
+                  </div>
+
+                  <p className="type-caption text-[var(--text-caption-6)]">
+                    Long-press any task to start a timer
+                  </p>
+                </div>
+
+                {/* Card 2: Essential List (3-task limit) */}
+                <div className="mb-[var(--space-6)] rounded-[var(--radius-lg)] border border-[var(--border-soft)] bg-[var(--surface-base)] p-[var(--space-5)]">
                   <div className="mb-[var(--space-3)] flex items-start justify-between">
                     <div className="min-w-0 flex-1">
-                      <h3 className="type-body mb-1 text-[var(--text-strong)]">Focus mode</h3>
+                      <h3 className="type-body font-semibold text-[var(--text-strong)]">Essential List</h3>
                       <p className="type-caption text-[var(--text-caption-6)]">
-                        Keeps your list to 3 tasks. Reduces decision fatigue.
+                        Limit to 3 tasks. Reduce overwhelm.
                       </p>
                     </div>
                     <label
                       className="relative ml-[var(--space-4)] flex h-11 w-16 shrink-0 cursor-pointer items-center"
-                      aria-label="Toggle focus mode"
+                      aria-label="Toggle Essential List"
                     >
                       <input
                         type="checkbox"
@@ -285,7 +318,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 <button
                   type="button"
                   onClick={handleNext}
-                  className={`type-body h-14 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-center text-white shadow-none transition-colors duration-200 hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white ${prefersReducedMotion ? '' : 'active:scale-[0.98]'}`}
+                  className="type-body h-14 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-center text-white shadow-none transition-colors duration-200 hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98]"
                 >
                   Continue
                 </button>
@@ -308,7 +341,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     const hasDifferentSelection = selectedPlant !== plant.id;
 
                     return (
-                    <motion.button
+                    <button
                       type="button"
                       key={plant.id}
                       onClick={() => setSelectedPlant(plant.id)}
@@ -317,10 +350,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                           ? 'border-[var(--accent-select-outline)] shadow-[0_0_0_1px_var(--accent-select-outline),var(--shadow-plant-card)]'
                           : 'border-[var(--border-soft)] shadow-[var(--shadow-plant-card)] hover:border-[var(--accent-select-outline)] hover:bg-[var(--surface-base-75)] hover:shadow-[0_0_0_1px_var(--accent-select-outline),var(--shadow-plant-card)]'
                       } ${hasDifferentSelection ? 'opacity-85' : 'opacity-100'}`}
-                      animate={{ scale: isSelected ? 1.02 : 1, opacity: hasDifferentSelection ? 0.85 : 1 }}
-                      whileHover={prefersReducedMotion ? {} : { scale: isSelected ? 1.02 : 1.02 }}
-                      transition={{ duration: 0.15, ease: 'easeOut' }}
-                      whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
                     >
                       {isSelected ? (
                         <span className="absolute right-[var(--space-3)] top-[var(--space-3)] flex h-6 w-6 items-center justify-center rounded-[var(--radius-full)] bg-[var(--accent-select-outline)] text-white shadow-sm">
@@ -342,14 +371,14 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                       <p className="type-caption text-center text-[var(--text-caption-7)]">
                         {plant.subtitle}
                       </p>
-                    </motion.button>
+                    </button>
                     );
                   })}
                 </div>
                 <button
                   type="button"
                   onClick={handleNext}
-                  className={`type-body mt-1 h-12 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-center text-white shadow-none transition-colors duration-200 hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white ${prefersReducedMotion ? '' : 'active:scale-[0.98]'}`}
+                  className="type-body h-14 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-center text-white shadow-none transition-colors duration-200 hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98]"
                 >
                   Start growing
                 </button>

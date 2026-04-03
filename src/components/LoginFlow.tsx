@@ -24,107 +24,41 @@ const LoginFlow: React.FC<LoginFlowProps> = ({ onAuthSuccess, onGuestMode }) => 
   const supabase = getSupabaseClient();
 
   const handleSubmit = async () => {
-    setError('');
-
-    if (!name.trim()) {
-      setError('Please enter your name');
-      return;
-    }
-    if (!password) {
-      setError('Please enter a password');
-      return;
-    }
-
-    if (!isReturningUser && password !== confirmPassword) {
-      setError('Passwords do not match');
-      return;
-    }
-
-    if (!isReturningUser && password.length < 6) {
-      setError('Password must be at least 6 characters');
-      return;
-    }
-
-    setIsLoading(true);
-
+    alert('Mock sign-up successful!'); // Debug alert
+    
+    // For prototype - just advance to next screen
+    const uniqueId = `mock-user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+    const mockUser = {
+      id: uniqueId,
+      email: `${name.toLowerCase().replace(/\s+/g, '')}@example.com`,
+      name: name
+    };
+    
+    const mockToken = 'mock-access-token-123';
+    
+    // Clear any existing onboarding completion for testing
     try {
-      const emailToUse = name.includes('@') ? name : `${name.toLowerCase().replace(/\s+/g, '')}@example.com`;
-      
-      if (isReturningUser) {
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: emailToUse,
-          password: password,
-        });
-
-        if (error) {
-          if (error.message.includes('Invalid login credentials')) {
-            setError('Email or password is incorrect. Please check your credentials.');
-          } else {
-            throw error;
-          }
-          return;
-        }
-        onAuthSuccess(data.user, data.session.access_token);
-      } else {
-        const { data: existingUser, error: signInError } = await supabase.auth.signInWithPassword({
-          email: emailToUse,
-          password: password,
-        });
-
-        if (signInError && !signInError.message.includes('Invalid login credentials')) {
-          throw signInError;
-        }
-
-        if (existingUser.user) {
-          onAuthSuccess(existingUser.user, existingUser.session.access_token);
-          return;
-        }
-
-        const response = await fetch(`https://${projectId}.supabase.co/functions/v1/make-server-997116c5/signup`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${publicAnonKey}`
-          },
-          body: JSON.stringify({
-            email: emailToUse,
-            password: password,
-            name: name
-          })
-        });
-
-        const result = await response.json();
-        
-        if (!response.ok) {
-          if (response.status === 409 || (result.code === 'user_exists')) {
-            setError('An account with this name already exists. Please use "Login" mode or try a different name.');
-            setIsReturningUser(true);
-          } else {
-            throw new Error(result.error || 'Failed to create account');
-          }
-          return;
-        }
-
-        const { data, error } = await supabase.auth.signInWithPassword({
-          email: emailToUse,
-          password: password,
-        });
-
-        if (error) throw error;
-        onAuthSuccess(data.user, data.session.access_token);
-      }
-    } catch (error: any) {
-      console.error('Auth error:', error);
-      setError(error.message || 'Something went wrong. Please try again.');
-    } finally {
-      setIsLoading(false);
+      localStorage.removeItem('lifelevel-onboarding-completed');
+      localStorage.removeItem(`lifelevel-onboarding-${uniqueId}`);
+    } catch (error) {
+      // Ignore localStorage errors
     }
+    
+    // Call success callback with mock data
+    onAuthSuccess(mockUser, mockToken);
   };
 
-  const canProceed = name.trim().length > 0 && password.length > 0 && (isReturningUser || confirmPassword.length > 0);
+  const canProceed = name.trim().length > 0 && 
+                    password.length >= 6 && 
+                    !isReturningUser && confirmPassword.length > 0 && 
+                    password === confirmPassword;
+
+  const passwordsMatch = confirmPassword.length > 0 && password === confirmPassword;
 
   const inputClass =
-    'type-body w-full h-[46px] box-border rounded-[var(--radius-md)] border border-[var(--border-soft-muted)] bg-[var(--surface-auth-input)] pl-[34px] pr-[var(--space-4)] text-[var(--text-body)] shadow-none transition-all placeholder:text-[var(--text-label-3)] focus:border-[var(--accent-login-focus)] focus:ring-2 focus:ring-[color:var(--accent-login-ring)]/10 focus:outline-none';
+    'type-body w-full h-[46px] box-border rounded-[var(--radius-md)] border border-[var(--border-soft-muted)] bg-[var(--surface-auth-input)] pl-[var(--space-4)] pr-[var(--space-4)] text-[var(--text-body)] shadow-none transition-all placeholder:text-[var(--text-label-3)] focus:border-[var(--accent-login-focus)] focus:ring-2 focus:ring-[color:var(--accent-login-ring)]/10 focus:outline-none';
+
+  const iconClass = "pointer-events-none absolute left-[11px] top-1/2 h-[15px] w-[15px] text-[var(--text-label-4)] -translate-y-1/2";
 
   return (
     <div
@@ -186,7 +120,6 @@ const LoginFlow: React.FC<LoginFlowProps> = ({ onAuthSuccess, onGuestMode }) => 
                 <label htmlFor="login-username" className="type-label mb-[var(--space-2)] block text-[var(--text-label-2)]">
                   Username
                 </label>
-                <User className="pointer-events-none absolute left-3 top-[32px] h-[15px] w-[15px] text-[var(--text-label-4)]" aria-hidden />
                 <input
                   id="login-username"
                   type="text"
@@ -203,7 +136,6 @@ const LoginFlow: React.FC<LoginFlowProps> = ({ onAuthSuccess, onGuestMode }) => 
                 <label htmlFor="login-password" className="type-label mb-[var(--space-2)] block text-[var(--text-label-2)]">
                   Password
                 </label>
-                <Lock className="pointer-events-none absolute left-3 top-[32px] h-[15px] w-[15px] text-[var(--text-label-4)]" aria-hidden />
                 <input
                   id="login-password"
                   type="password"
@@ -219,8 +151,12 @@ const LoginFlow: React.FC<LoginFlowProps> = ({ onAuthSuccess, onGuestMode }) => 
                 <div className="relative">
                   <label htmlFor="login-confirm" className="type-label mb-[var(--space-2)] block text-[var(--text-label-2)]">
                     Confirm password
+                    {confirmPassword.length > 0 && (
+                      <span className={`ml-2 text-xs ${passwordsMatch ? 'text-green-600' : 'text-red-600'}`}>
+                        {passwordsMatch ? '✓ Match' : '✗ No match'}
+                      </span>
+                    )}
                   </label>
-                  <Lock className="pointer-events-none absolute left-3 top-[32px] h-[15px] w-[15px] text-[var(--text-label-4)]" aria-hidden />
                   <input
                     id="login-confirm"
                     type="password"
@@ -255,12 +191,13 @@ const LoginFlow: React.FC<LoginFlowProps> = ({ onAuthSuccess, onGuestMode }) => 
 
             <div className="mt-[var(--space-5)]">
               <button
+                key={canProceed ? 'enabled' : 'disabled'}
                 type="button"
                 onClick={handleSubmit}
                 disabled={!canProceed || isLoading}
                 className={`type-body h-[48px] w-full rounded-[var(--radius-full)] font-semibold transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-auth-card)] active:scale-[0.97] ${
                   canProceed && !isLoading
-                    ? 'bg-[var(--surface-auth-button)] text-white hover:bg-[var(--surface-auth-button-hover)]'
+                    ? 'bg-teal-500 text-white hover:bg-teal-600'
                     : 'bg-[var(--surface-auth-button-disabled)] text-white/92'
                 } disabled:cursor-not-allowed disabled:opacity-40`}
               >
@@ -273,20 +210,8 @@ const LoginFlow: React.FC<LoginFlowProps> = ({ onAuthSuccess, onGuestMode }) => 
                 )}
               </button>
             </div>
-
-            <div className="mt-[var(--space-3)] text-center">
-              <button
-                type="button"
-                onClick={onGuestMode}
-                disabled={isLoading}
-                className="type-body font-semibold text-[var(--text-body-muted-alt)] transition-all duration-150 ease-out hover:text-[var(--text-strong-alt)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-auth-card)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Try as Guest
-              </button>
-            </div>
           </div>
         </motion.div>
-
       </div>
     </div>
   );

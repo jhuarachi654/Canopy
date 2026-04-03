@@ -31,7 +31,7 @@ const defaultBlobs: BackgroundBlob[] = [
     color: 'var(--accent-lilac)',
     width: 180,
     height: 180,
-    opacity: 0.35,
+    opacity: 0.45,
     blur: 80,
     top: -42,
     right: -26,
@@ -40,7 +40,7 @@ const defaultBlobs: BackgroundBlob[] = [
     color: 'var(--accent-lilac-deep)',
     width: 200,
     height: 200,
-    opacity: 0.4,
+    opacity: 0.5,
     blur: 100,
     bottom: -60,
     left: -56,
@@ -371,7 +371,7 @@ export default function CanopyScreenBackground({
 
   return (
     <div
-      className={`pointer-events-none absolute inset-0 z-0 overflow-hidden canopy-textured-surface ${className}`}
+      className={`pointer-events-none fixed inset-0 z-0 overflow-hidden canopy-textured-surface ${className}`}
       aria-hidden
       style={{ backgroundColor: resolvedBaseColor }}
     >

@@ -112,7 +112,15 @@ const backgroundThemes: BackgroundTheme[] = [
 export default function App() {
   const prefersReducedMotion = useReducedMotion();
   const [activeScreen, setActiveScreen] = useState<'todos' | 'game' | 'log' | 'journal' | 'settings'>('todos');
-  const [todos, setTodos] = useState<Todo[]>([]);
+  const [todos, setTodos] = useState<Todo[]>(() => {
+    const now = new Date();
+    return [
+      { id: 'demo-1', text: 'Buy fresh groceries', completed: false, createdAt: now },
+      { id: 'demo-2', text: 'Call the dentist', completed: false, createdAt: new Date(now.getTime() - 60000) },
+      { id: 'demo-3', text: 'Pay monthly bills', completed: true, createdAt: new Date(now.getTime() - 86400000), completedAt: new Date(now.getTime() - 3600000) },
+      { id: 'demo-4', text: 'Do laundry', completed: true, createdAt: new Date(now.getTime() - 172800000), completedAt: new Date(now.getTime() - 86400000) },
+    ];
+  });
   const [reflections, setReflections] = useState<WeeklyReflection[]>([]);
   const [journalEntries, setJournalEntries] = useState<JournalEntry[]>([]);
   const [dailyStats, setDailyStats] = useState<DailyStats[]>([]);
@@ -127,9 +135,9 @@ export default function App() {
     }
   });
   const [playerProgress, setPlayerProgress] = useState<PlayerProgress>({
-    level: 1,
-    currentXP: 0,
-    totalXP: 0,
+    level: 4,
+    currentXP: 1500,
+    totalXP: 1500,
     unlockedRewards: []
   });
   const [user, setUser] = useState<any>(null);
@@ -167,6 +175,16 @@ export default function App() {
   const supabase = getSupabaseClient();
   const hasInitializedProgressPersistence = useRef(false);
 
+  // DEMO FIX: Clear localStorage on startup to use preset data
+  useEffect(() => {
+    try {
+      localStorage.removeItem('lifelevel-guest-todos');
+      localStorage.removeItem('lifelevel-guest-progress');
+    } catch (e) {
+      // ignore
+    }
+  }, []);
+
   useEffect(() => {
     const syncFocusMode = () => {
       try {
@@ -176,10 +194,11 @@ export default function App() {
         setFocusModeOn(true);
       }
     };
-    syncFocusMode();
+
     window.addEventListener('storage', syncFocusMode);
     window.addEventListener('focus', syncFocusMode);
     window.addEventListener('canopy-focus-mode-updated', syncFocusMode);
+
     return () => {
       window.removeEventListener('storage', syncFocusMode);
       window.removeEventListener('focus', syncFocusMode);
@@ -1204,22 +1223,32 @@ export default function App() {
     setAccessToken(token);
     setIsGuestMode(false);
     
-    // Check if this is a brand new user (no onboarding completion record)
+    // Clear any existing data to ensure demo data shows
     try {
-      const completed = localStorage.getItem('lifelevel-onboarding-completed');
-      const userSpecificCompleted = localStorage.getItem(`lifelevel-onboarding-${newUser.id}`);
-      
-      // Show onboarding if neither global nor user-specific completion is found
-      if (!completed && !userSpecificCompleted) {
-        setShowOnboarding(true);
-      } else {
-        setShowOnboarding(false);
-      }
+      localStorage.removeItem('lifelevel-guest-todos');
     } catch (error) {
-      console.warn('Could not check onboarding status:', error);
-      setShowOnboarding(true); // Default to showing onboarding on error
+      // ignore
     }
-
+    
+    // ALL accounts get demo data by default
+    setPlayerProgress({
+      level: 4,
+      currentXP: 1500,
+      totalXP: 1500,
+      unlockedRewards: []
+    });
+    
+    // Reset to demo tasks
+    const now = new Date();
+    const demoTodos = [
+      { id: 'demo-1', text: 'Buy fresh groceries', completed: false, createdAt: now },
+      { id: 'demo-2', text: 'Call the dentist', completed: false, createdAt: new Date(now.getTime() - 60000) },
+      { id: 'demo-3', text: 'Pay monthly bills', completed: true, createdAt: new Date(now.getTime() - 86400000), completedAt: new Date(now.getTime() - 3600000) },
+      { id: 'demo-4', text: 'Do laundry', completed: true, createdAt: new Date(now.getTime() - 172800000), completedAt: new Date(now.getTime() - 86400000) },
+    ];
+    setTodos(demoTodos);
+    setDailyStats(generateDailyStats(demoTodos));
+    
     // Try to load user data from Supabase
     try {
       const todos = await taskApi.getTasks(token);
@@ -1229,27 +1258,29 @@ export default function App() {
         completedAt: todo.completed_at ? new Date(todo.completed_at) : undefined,
         destroyedAt: todo.destroyed_at ? new Date(todo.destroyed_at) : undefined,
       }));
-      setTodos(parsedTodos);
-      setDailyStats(generateDailyStats(parsedTodos));
-
-      const progress = await progressApi.getProgress(token);
-      if (progress) {
-        setPlayerProgress({
-          level: progress.level || 1,
-          currentXP: progress.current_xp || 0,
-          totalXP: progress.total_xp || 0,
-          unlockedRewards: progress.unlocked_rewards || []
-        });
+      
+      // Don't overwrite demo data with empty server data
+      if (parsedTodos.length > 0) {
+        setTodos(parsedTodos);
+        setDailyStats(generateDailyStats(parsedTodos));
       }
-
-      const settings = await settingsApi.getSettings(token);
-      if (settings) {
-        setGameSettings({
-          animationType: settings.animation_type || 'sparkles',
-        });
+      
+      // Load progress from server
+      const progress = await progressApi.getProgress(token);
+      if (progress && progress.total_xp > 0) {
+        // Only use server progress if it's higher than demo
+        if (progress.total_xp > 1500) {
+          setPlayerProgress({
+            level: progress.level || 4,
+            currentXP: progress.current_xp || 1500,
+            totalXP: progress.total_xp || 1500,
+            unlockedRewards: progress.unlocked_rewards || []
+          });
+        }
       }
     } catch (error) {
-      console.error('Failed to load user data:', error);
+      console.error('Error loading user data:', error);
+      // Demo data already set, no need to do anything
     }
   };
 
@@ -1257,6 +1288,12 @@ export default function App() {
     setIsGuestMode(true);
     setUser({ id: 'guest', email: 'guest@example.com' }); // Fake user object for guest
     setAccessToken(null);
+    // Clear localStorage to ensure demo tasks show up
+    try {
+      localStorage.removeItem('lifelevel-guest-todos');
+    } catch (error) {
+      // ignore
+    }
     loadGuestData();
     // Don't skip onboarding for guests - they should see it too
     // Check if they've already completed onboarding
@@ -1363,41 +1400,10 @@ export default function App() {
 
   return (
     <div
-      className="relative flex flex-col bg-[#FAFAFA]"
-      style={{
-        minHeight: '100dvh',
-        paddingTop: 'max(env(safe-area-inset-top), 50px)',
-      }}
+      className="relative flex flex-col bg-[#FAFAFA] min-h-dvh overflow-visible"
     >
       <CanopyScreenBackground variant={sharedBackgroundVariant} />
-      {focusModeOn && (
-        <motion.div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-0 z-[2]"
-          animate={
-            prefersReducedMotion
-              ? { opacity: 0.25 }
-              : {
-                  boxShadow: [
-                    'inset 0 0 0 1px rgba(20,184,166,0.14)',
-                    'inset 0 0 0 2px rgba(20,184,166,0.24)',
-                    'inset 0 0 0 1px rgba(20,184,166,0.14)',
-                  ],
-                }
-          }
-          transition={{ duration: 0.36, repeat: prefersReducedMotion ? 0 : Infinity, repeatType: 'loop' }}
-        />
-      )}
       {/* Removed immersive game background - using clean gradient instead */}
-      
-      {/* Fixed Top Navigation */}
-      <NavigationBar
-        activeScreen={activeScreen}
-        onScreenChange={setActiveScreen}
-        completedCount={completedTodos.length}
-        onLogout={handleLogout}
-        isGuestMode={isGuestMode}
-      />
       
       <Toaster 
         position="bottom-center"
@@ -1419,20 +1425,15 @@ export default function App() {
         }}
       />
       
-      {/* Screen Content with bottom padding to account for fixed navbar + safe area */}
-      <motion.div 
-        className="flex-1 relative z-10 min-h-0"
-        style={{
-          paddingBottom: `calc(6rem + env(safe-area-inset-bottom))`
-        }}
+      {/* Screen Content */}
+      <div 
+        className="flex-1 relative z-10"
         key={activeScreen}
-        initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.3 }}
       >
         {activeScreen === 'todos' && (
           <TodoListScreen
             todos={todos}
+            userName={user?.name}
             onAddTodo={addTodo}
             onToggleTodo={toggleTodo}
             onEditTodo={editTodo}
@@ -1479,7 +1480,16 @@ export default function App() {
             levelConfig={levelConfig}
           />
         )}
-      </motion.div>
+      </div>
+
+      {/* Fixed Bottom Navigation */}
+      <NavigationBar
+        activeScreen={activeScreen}
+        onScreenChange={setActiveScreen}
+        completedCount={completedTodos.length}
+        onLogout={handleLogout}
+        isGuestMode={isGuestMode}
+      />
 
       {focusSession && (
         <FocusTaskScreen

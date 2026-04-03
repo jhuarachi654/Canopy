@@ -36,7 +36,7 @@ export default function FocusTaskModal({ isOpen, onClose, onConfirm, todo }: Foc
           animate={{ scale: 1, opacity: 1 }}
           exit={{ scale: 0.95, opacity: 0 }}
           transition={{ type: "spring", duration: 0.2 }}
-          className="mx-4 max-w-sm w-full rounded-[var(--radius-xl)] bg-[var(--surface-base)] p-[var(--space-6)] shadow-[var(--shadow-card-strong)]"
+          className="mx-4 max-w-sm w-full rounded-[var(--radius-xl)] bg-[var(--surface-base)] p-[var(--space-6)] pb-[calc(var(--space-6)+env(safe-area-inset-bottom))] shadow-[var(--shadow-card-strong)]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}

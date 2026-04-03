@@ -597,7 +597,7 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ delay: 0.2 }}
-          className="flex items-center gap-4 mb-12"
+          className="flex items-center gap-4 mb-12 pb-[env(safe-area-inset-bottom)]"
         >
           <button
             onClick={handleStartPause}

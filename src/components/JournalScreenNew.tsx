@@ -752,7 +752,6 @@ export default function JournalScreen({
                 </motion.div>
               ))}
             </AnimatePresence>
-          </div>
         </div>
       </div>
     </div>

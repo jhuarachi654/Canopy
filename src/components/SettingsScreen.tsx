@@ -2,12 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'motion/react';
 import { ChevronRight, User, Sparkles, Focus, Bell, CircleHelp, Bug } from 'lucide-react';
 import type { PlayerProgress } from '../App';
-
-// Import plant images for consistency
-import plant1 from '../assets/plants/1- plant.png';
-import plant2 from '../assets/plants/Plant 2.png';
-import plant3 from '../assets/plants/Plant 3.png';
-import plant4 from '../assets/plants/grehrehr 6.png';
+import { getPlantById } from '../lib/plantRegistry';
 
 const FOCUS_MODE_STORAGE_KEY = 'lifelevel-focus-mode';
 const FOCUS_MODE_UPDATED_EVENT = 'canopy-focus-mode-updated';
@@ -58,23 +53,23 @@ export default function SettingsScreen({
     }
   }, []);
 
-  // Plant configuration
+  // Plant configuration - using registry
   const plants = {
     'quiet-fern': {
-      name: 'Quiet Fern',
-      image: plant1,
+      name: getPlantById('quiet-fern')?.displayName || 'Quiet Fern',
+      image: getPlantById('quiet-fern')?.image || '',
     },
     'wild-clover': {
-      name: 'Wild Clover',
-      image: plant2,
+      name: getPlantById('wild-clover')?.displayName || 'Wild Clover',
+      image: getPlantById('wild-clover')?.image || '',
     },
     'rose-moss': {
-      name: 'Rose Moss',
-      image: plant3,
+      name: getPlantById('rose-moss')?.displayName || 'Rose Moss',
+      image: getPlantById('rose-moss')?.image || '',
     },
     'blue-sage': {
-      name: 'Blue Sage',
-      image: plant4,
+      name: getPlantById('blue-sage')?.displayName || 'Blue Sage',
+      image: getPlantById('blue-sage')?.image || '',
     },
   };
 

@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useRef, useCallback, useImperativeHandle } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { X, Play, Pause, RotateCcw, Coffee, Flower, TreePine, Sprout, Target, ChevronDown, Music, Volume2, VolumeX } from 'lucide-react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
+import { X, Music, ChevronDown, Pause, Play, RotateCcw, Coffee } from 'lucide-react';
+import { getUnlockedPlants, getPlantById, getUserUnlockedPlants } from '../lib/plantRegistry';
 import type { Todo } from '../App';
+import CanopyScreenBackground from './CanopyScreenBackground';
 
 interface Plant {
   id: string;
@@ -16,44 +18,6 @@ interface PlantPosition {
   position: { x: number; y: number };
   isDragging?: boolean;
 }
-
-// Import plant images
-import plant1 from '../assets/plants/1- plant.png';
-import plant2 from '../assets/plants/Plant 2.png';
-import plant3 from '../assets/plants/Plant 3.png';
-import plant4 from '../assets/plants/grehrehr 6.png';
-import plant5 from '../assets/plants/grehrehr 7.png';
-import plant6 from '../assets/plants/grehrehr 8.png';
-import plant7 from '../assets/plants/grehrehr 9.png';
-import plant8 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 1.png';
-import plant9 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 2.png';
-import plant10 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 3.png';
-import plant11 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 4.png';
-import plant12 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 5.png';
-import plant13 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 6.png';
-import plant14 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 7.png';
-import plant15 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 8.png';
-import plant16 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 9.png';
-
-// Mock plant data - updated with new plant images
-const mockPlants: Plant[] = [
-  { id: '1', name: 'Pixel Sprout', image: plant1, unlocked: true, level: 1 },
-  { id: '2', name: 'Green Buddy', image: plant2, unlocked: true, level: 2 },
-  { id: '3', name: 'Leaf Friend', image: plant3, unlocked: true, level: 3 },
-  { id: '4', name: 'Tiny Succulent', image: plant4, unlocked: true, level: 4 },
-  { id: '5', name: 'Mini Cactus', image: plant5, unlocked: true, level: 5 },
-  { id: '6', name: 'Pixel Fern', image: plant6, unlocked: true, level: 6 },
-  { id: '7', name: 'Garden Gem', image: plant7, unlocked: true, level: 7 },
-  { id: '8', name: 'Succulent 1', image: plant8, unlocked: true, level: 8 },
-  { id: '9', name: 'Succulent 2', image: plant9, unlocked: true, level: 9 },
-  { id: '10', name: 'Succulent 3', image: plant10, unlocked: true, level: 10 },
-  { id: '11', name: 'Succulent 4', image: plant11, unlocked: true, level: 11 },
-  { id: '12', name: 'Succulent 5', image: plant12, unlocked: true, level: 12 },
-  { id: '13', name: 'Succulent 6', image: plant13, unlocked: true, level: 13 },
-  { id: '14', name: 'Succulent 7', image: plant14, unlocked: true, level: 14 },
-  { id: '15', name: 'Succulent 8', image: plant15, unlocked: true, level: 15 },
-  { id: '16', name: 'Succulent 9', image: plant16, unlocked: true, level: 16 },
-];
 
 interface DecorativePlantProps {
   plantData: PlantPosition;
@@ -103,6 +67,7 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
 
   const handleTouchMove = useCallback((e: TouchEvent) => {
     if (!isDragging) return;
+    e.preventDefault(); // Only prevent default when actually dragging
     const touch = e.touches[0];
     const newX = touch.clientX - dragStart.x;
     const newY = touch.clientY - dragStart.y;
@@ -135,6 +100,7 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
 
   useEffect(() => {
     if (isDragging) {
+      // Use passive: false only for touchmove when we need to prevent default
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
       document.addEventListener('touchmove', handleTouchMove, { passive: false });
@@ -200,8 +166,10 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
       onClick={() => !isDragging && console.log(`Clicked on ${plantData.plant.name}`)}
       className={`absolute z-50 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       style={{
-        left: `${plantData.position.x}px`,
-        top: `${plantData.position.y}px`,
+        // Use transform translate for GPU acceleration instead of top/left
+        transform: `translate(${plantData.position.x}px, ${plantData.position.y}px)`,
+        // Add will-change only during drag for optimal performance
+        willChange: isDragging ? 'transform' : 'auto',
         width: '80px',
         height: '80px',
         filter: isDragging ? 'drop-shadow(0 10px 20px rgba(0,0,0,0.2))' : 'none'
@@ -224,18 +192,32 @@ interface FocusTaskScreenProps {
 }
 
 export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: FocusTaskScreenProps) {
-  const [timeLeft, setTimeLeft] = useState(targetTime * 60); // Convert to seconds
+  const prefersReducedMotion = useReducedMotion();
   const [isRunning, setIsRunning] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
-  const [breakTime, setBreakTime] = useState(5 * 60); // 5 minutes break
+  const [timeLeft, setTimeLeft] = useState(targetTime * 60);
+  const [selectedMusic, setSelectedMusic] = useState('ambiance');
+  const [showMusicDropdown, setShowMusicDropdown] = useState(false);
   const [showBreakConfirm, setShowBreakConfirm] = useState(false);
   const [showBreakComplete, setShowBreakComplete] = useState(false);
-  const [autoStartNext, setAutoStartNext] = useState(false);
-  const [selectedMusic, setSelectedMusic] = useState('lofi');
-  const [showMusicDropdown, setShowMusicDropdown] = useState(false);
-  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [ownedPlants, setOwnedPlants] = useState<string[]>([]);
+  const [breakTime] = useState(5 * 60); // 5 minutes in seconds
+  
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoStartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Load user's owned plants from localStorage
+  useEffect(() => {
+    try {
+      const savedOwnedPlants = localStorage.getItem('lifelevel-owned-plants');
+      if (savedOwnedPlants) {
+        setOwnedPlants(JSON.parse(savedOwnedPlants));
+      }
+    } catch (error) {
+      console.warn('Could not load owned plants:', error);
+    }
+  }, []);
   
   // Plant positioning state - using pixel positions instead of percentages
   const [plantPositions, setPlantPositions] = useState<PlantPosition[]>([]);
@@ -244,7 +226,33 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
 
   // Generate positions for plants to match reference image layout
   useEffect(() => {
-    const unlockedPlants = mockPlants.filter(plant => plant.unlocked);
+    // Only use plants the user actually owns
+    const userOwnedPlants = ownedPlants.map(plantId => {
+      const plant = getPlantById(plantId);
+      if (!plant) return null;
+      return {
+        id: plant.id,
+        name: plant.displayName,
+        image: plant.image,
+        unlocked: true,
+        level: plant.unlockLevel || 1,
+      };
+    }).filter(Boolean) as Plant[];
+    
+    // Limit to maximum 3 plants - if user has more, randomly select 3
+    let plantsToShow = userOwnedPlants;
+    if (plantsToShow.length > 3) {
+      // Randomly select 3 plants from user's collection
+      const shuffled = [...plantsToShow].sort(() => 0.5 - Math.random());
+      plantsToShow = shuffled.slice(0, 3);
+    }
+    
+    // If user has no plants, don't show any
+    if (plantsToShow.length === 0) {
+      setPlantPositions([]);
+      return;
+    }
+    
     const w = window.innerWidth;
     const h = window.innerHeight;
     const plantSize = 80;
@@ -255,7 +263,7 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
     const centerY = h / 2;
     
     // Define positions to match reference image - plants around the timer
-    const positions: PlantPosition[] = unlockedPlants.map((plant, index) => {
+    const positions: PlantPosition[] = plantsToShow.map((plant, index) => {
       // Position plants in the 4 quadrants around the timer
       switch (index % 4) {
         case 0: // Top left area
@@ -299,7 +307,7 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
     
     // End intro phase after initial animations
     setTimeout(() => setIsIntro(false), 2000);
-  }, []); // Only run once on mount
+  }, [ownedPlants]); // Re-run when owned plants change
 
   const handlePlantPositionChange = (plantId: string, newPosition: { x: number, y: number }) => {
     setPlantPositions(prev => prev.map(p => 
@@ -462,7 +470,13 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
   };
 
   const handleStartPause = () => {
+    const wasRunning = isRunning;
     setIsRunning(!isRunning);
+    
+    // Start ambiance music when timer starts (if not already playing)
+    if (!wasRunning && selectedMusic === 'none') {
+      setSelectedMusic('ambiance');
+    }
   };
 
   const handleReset = () => {
@@ -476,6 +490,11 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
     setTimeLeft(breakTime);
     setShowBreakConfirm(false);
     setIsRunning(true);
+    
+    // Start ambiance music when break starts (if not already playing)
+    if (selectedMusic === 'none') {
+      setSelectedMusic('ambiance');
+    }
   };
 
   const handleSkipBreak = () => {
@@ -484,7 +503,18 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
     setShowBreakConfirm(false);
   };
 
-  const unlockedPlants = mockPlants.filter(plant => plant.unlocked);
+  // Get user's owned plants for display (same logic as positioning)
+  const ownedPlantsForDisplay = ownedPlants.map(plantId => {
+    const plant = getPlantById(plantId);
+    if (!plant) return null;
+    return {
+      id: plant.id,
+      name: plant.displayName,
+      image: plant.image,
+      unlocked: true,
+      level: plant.unlockLevel || 1,
+    };
+  }).filter(Boolean) as Plant[];
 
   return (
     <motion.div
@@ -658,7 +688,10 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
 
         {/* Music Dropdown */}
         <div className="relative z-[101]">
-          <div className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out w-28">
+          <button
+            onClick={() => setShowMusicDropdown(!showMusicDropdown)}
+            className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out w-28 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.97]"
+          >
             {/* Music icon with playing indicator */}
             <div className="relative">
               <Music className="h-4 w-4 flex-shrink-0" />
@@ -670,31 +703,14 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
               )}
             </div>
             
-            {/* Main button area - toggles enable/disable */}
-            <button
-              onClick={() => {
-                if (selectedMusic === 'none') {
-                  setSelectedMusic('lofi'); // Enable with default
-                } else {
-                  setSelectedMusic('none'); // Disable
-                }
-              }}
-              className="capitalize truncate flex-1 min-w-0 text-left hover:text-[var(--text-body)] transition-colors"
-            >
-              {selectedMusic === 'none' ? 'Off' : selectedMusic}
-            </button>
+            {/* Display current selection */}
+            <span className="capitalize truncate flex-1 min-w-0 text-left">
+              {selectedMusic === 'none' ? 'Select Music' : selectedMusic}
+            </span>
             
-            {/* Dropdown arrow - opens menu */}
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setShowMusicDropdown(!showMusicDropdown);
-              }}
-              className="flex-shrink-0 hover:text-[var(--text-body)] transition-colors"
-            >
-              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showMusicDropdown ? 'rotate-180' : ''}`} />
-            </button>
-          </div>
+            {/* Dropdown arrow */}
+            <ChevronDown className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${showMusicDropdown ? 'rotate-180' : ''}`} />
+          </button>
 
           <AnimatePresence>
             {showMusicDropdown && (

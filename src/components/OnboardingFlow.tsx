@@ -2,12 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import svgPaths from '../imports/Frame47296-1/svg-0hdeo07ddu';
 import { Check, ChevronLeft, Target, Lightbulb } from 'lucide-react';
-
-// Plant images for selection screen
-import plant1 from '../assets/plants/1- plant.png';
-import plant2 from '../assets/plants/Plant 2.png';
-import plant3 from '../assets/plants/Plant 3.png';
-import plant4 from '../assets/plants/grehrehr 6.png';
+import { getStarterPlants } from '../lib/plantRegistry';
 import CanopyScreenBackground from './CanopyScreenBackground';
 
 const FOCUS_MODE_STORAGE_KEY = 'lifelevel-focus-mode';
@@ -26,32 +21,13 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [selectedPlant, setSelectedPlant] = useState('quiet-fern');
   const [isLoading, setIsLoading] = useState(false);
 
-  const plants = [
-    {
-      id: 'quiet-fern',
-      name: 'Quiet Fern',
-      subtitle: 'calm & steady',
-      image: plant1,
-    },
-    {
-      id: 'wild-clover',
-      name: 'Wild Clover',
-      subtitle: 'resilient & bright',
-      image: plant2,
-    },
-    {
-      id: 'rose-moss',
-      name: 'Rose Moss',
-      subtitle: 'soft & enduring',
-      image: plant3,
-    },
-    {
-      id: 'blue-sage',
-      name: 'Blue Sage',
-      subtitle: 'deep & thoughtful',
-      image: plant4,
-    },
-  ];
+  // Get starter plants from registry
+  const plants = getStarterPlants().map(plant => ({
+    id: plant.id,
+    name: plant.displayName,
+    subtitle: plant.personality,
+    image: plant.image,
+  }));
 
   const handleNext = () => {
     console.log('Current step:', currentStep, 'Loading state:', isLoading);
@@ -68,7 +44,24 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       localStorage.setItem('lifelevel-user-name', userName);
       localStorage.setItem('lifelevel-user-feeling', userFeeling);
       localStorage.setItem('lifelevel-focus-mode', focusMode.toString());
+      
+      // Save ONLY the chosen starter plant as the user's first owned plant
       localStorage.setItem('lifelevel-selected-plant', selectedPlant);
+      
+      // Initialize user's owned plants array with ONLY the selected starter plant
+      // The other 3 starter plants must be earned through leveling up
+      const ownedPlants = [selectedPlant];
+      localStorage.setItem('lifelevel-owned-plants', JSON.stringify(ownedPlants));
+      
+      // Initialize user progress (starting at Level 1 with 0 points)
+      const initialProgress = {
+        level: 1,
+        currentXP: 0,
+        totalXP: 0,
+        ownedPlants: ownedPlants,
+        unlockedPlants: [selectedPlant] // Only the selected plant is unlocked
+      };
+      localStorage.setItem('lifelevel-player-progress', JSON.stringify(initialProgress));
       
       // Complete onboarding instantly
       onComplete();

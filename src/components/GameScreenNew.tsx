@@ -3,12 +3,8 @@ import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import { Send, Sparkles, Check } from 'lucide-react';
 import type { Todo, JournalEntry } from '../App';
 import JournalEntryDetailView from './JournalEntryDetailView';
-
-// Import all plant images
-import plant1 from '../assets/plants/1- plant.png';
-import plant2 from '../assets/plants/Plant 2.png';
-import plant3 from '../assets/plants/Plant 3.png';
-import plant4 from '../assets/plants/grehrehr 6.png';
+import { getUnlockedPlants, getPlantById, getNewlyUnlockedPlants, getUserUnlockedPlants, PLANT_REGISTRY } from '../lib/plantRegistry';
+import { getLevelFromPoints, checkLevelUp } from '../lib/pointsSystem';
 
 // Import pixelated grass background
 import grassTexture from 'figma:asset/efb1d6fe14114965e2db541fd29beb0dca2527d6.png';
@@ -43,6 +39,7 @@ export default function GameScreen({
   const [hasJournaledToday, setHasJournaledToday] = useState(false);
   const [completedTasksToday, setCompletedTasksToday] = useState(0);
   const [selectedPlant, setSelectedPlant] = useState('quiet-fern');
+  const [ownedPlants, setOwnedPlants] = useState<string[]>([]);
   const [reflectionText, setReflectionText] = useState('');
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [showDetailView, setShowDetailView] = useState(false);
@@ -52,41 +49,26 @@ export default function GameScreen({
   const [didTwoMinuteReset, setDidTwoMinuteReset] = useState(false);
   const prevLevelRef = useRef(playerProgress.level);
 
-  // Load selected plant from localStorage
+  // Load user data from localStorage
   useEffect(() => {
     try {
       const savedPlant = localStorage.getItem('lifelevel-selected-plant');
       if (savedPlant) {
         setSelectedPlant(savedPlant);
       }
+      
+      // Load owned plants
+      const savedOwnedPlants = localStorage.getItem('lifelevel-owned-plants');
+      if (savedOwnedPlants) {
+        setOwnedPlants(JSON.parse(savedOwnedPlants));
+      }
     } catch (error) {
-      console.warn('Could not load selected plant:', error);
+      console.warn('Could not load user data:', error);
     }
   }, []);
 
-  // Plant configuration
-  const plants = {
-    'quiet-fern': {
-      name: 'Quiet Fern',
-      image: plant1,
-      unlockLevel: 1,
-    },
-    'wild-clover': {
-      name: 'Wild Clover',
-      image: plant2,
-      unlockLevel: 5,
-    },
-    'rose-moss': {
-      name: 'Rose Moss',
-      image: plant3,
-      unlockLevel: 10,
-    },
-    'blue-sage': {
-      name: 'Blue Sage',
-      image: plant4,
-      unlockLevel: 15,
-    },
-  };
+  // Plant configuration - using all plants from registry
+  const plants = PLANT_REGISTRY;
 
   const currentPlant = plants[selectedPlant as keyof typeof plants] || plants['quiet-fern'];
 
@@ -326,7 +308,7 @@ export default function GameScreen({
                 >
                   <img 
                     src={currentPlant.image} 
-                    alt={currentPlant.name}
+                    alt={currentPlant.displayName}
                     className="pixelated w-18 h-auto drop-shadow-xl"
                     style={{
                       imageRendering: 'pixelated',
@@ -364,7 +346,7 @@ export default function GameScreen({
               
               {/* Plant name label at bottom */}
               <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 backdrop-blur-sm">
-                <p className="text-white text-xs font-medium">{currentPlant.name}</p>
+                <p className="text-white text-xs font-medium">{currentPlant.displayName}</p>
               </div>
             </div>
           </div>
@@ -609,85 +591,104 @@ export default function GameScreen({
         </motion.div>
 
         {/* Plant Collection */}
-        <motion.div 
-          className="mb-6"
+        <motion.div
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.4 }}
+          className="mb-6"
         >
           <h4 className="mb-3 px-1 text-xs font-light uppercase tracking-widest text-[var(--text-caption-2)]">
             Your Plant Collection
           </h4>
           
-          <div className="grid grid-cols-2 gap-4">
-            {Object.entries(plants).map(([key, plant], index) => {
-              const isUnlocked = playerProgress.level >= plant.unlockLevel;
+          <div className="grid grid-cols-3 gap-[var(--space-2)] px-1">
+            {Object.entries(plants).sort(([keyA], [keyB]) => {
+              const isOwnedA = ownedPlants.includes(keyA);
+              const isOwnedB = ownedPlants.includes(keyB);
+              
+              // Owned plants come first
+              if (isOwnedA && !isOwnedB) return -1;
+              if (!isOwnedA && isOwnedB) return 1;
+              
+              // Within each group, maintain original order
+              return 0;
+            }).map(([key, plant], index) => {
+              // Calculate current level from total XP using points system
+              const currentLevel = getLevelFromPoints(playerProgress.totalXP);
+              // Check if user owns this plant
+              const isOwned = ownedPlants.includes(key);
+              // Check if this is the user's starter plant (first owned plant)
+              const isStarterPlant = ownedPlants.length > 0 && ownedPlants[0] === key;
+              // Use user-specific unlock logic
+              const isUnlocked = isOwned || 
+                                (plant.isStarter && currentLevel >= 2) || 
+                                (plant.unlockLevel && currentLevel >= plant.unlockLevel);
               const isSelected = key === selectedPlant;
               
+              // Determine what text to show below the plant
+              let unlockText = '';
+              if (isOwned && isStarterPlant) {
+                unlockText = 'Your first plant';
+              } else if (!isUnlocked && plant.unlockLevel) {
+                unlockText = `Unlocks at level ${plant.unlockLevel}`;
+              }
+              
               return (
-                <motion.button
-                  key={key}
-                  onClick={() => {
-                    if (isUnlocked) {
-                      setSelectedPlant(key);
-                      localStorage.setItem('lifelevel-selected-plant', key);
-                    }
-                  }}
-                  initial={{ scale: 0, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  transition={{ 
-                    delay: 0.5 + (index * 0.1),
-                    type: "spring",
-                    stiffness: 200,
-                    damping: 15
-                  }}
-                  className={`relative rounded-3xl border-2 bg-[var(--surface-base-80)] p-4 shadow-sm backdrop-blur-sm transition-all ${
-                    isSelected
-                      ? 'border-[var(--text-caption-2)] shadow-lg'
-                      : 'border-[var(--border-soft)]'
-                  } ${
-                    isUnlocked
-                      ? 'cursor-pointer hover:border-[color:var(--text-caption-2)]/50 hover:shadow-md'
-                      : 'cursor-not-allowed opacity-50'
-                  }`}
-                  whileHover={isUnlocked ? { 
-                    scale: 1.03,
-                    y: -4
-                  } : {}}
-                  whileTap={isUnlocked ? { scale: 0.98 } : {}}
-                >
-                  {/* Selected state is shown by border styling only */}
-                  
+              <motion.button
+                key={key}
+                onClick={() => {
+                  if (isUnlocked) {
+                    setSelectedPlant(key);
+                    localStorage.setItem('lifelevel-selected-plant', key);
+                  }
+                }}
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ 
+                  delay: 0.5 + (index * 0.1),
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 15
+                }}
+                className={`relative aspect-square rounded-[var(--radius-md)] border border-[var(--border-soft-panel-3)] bg-[var(--surface-base)] p-[var(--space-3)] shadow-[var(--shadow-card-soft)] transition-all duration-150 ease-out ${
+                  isSelected
+                    ? 'border-[var(--accent-teal)] bg-[var(--surface-card-subtle-2)]'
+                    : ''
+                } ${
+                  isUnlocked
+                    ? 'hover:bg-[var(--surface-hover-panel)] cursor-pointer'
+                    : 'cursor-not-allowed'
+                }`}
+                whileHover={isUnlocked ? { 
+                  scale: 1.02,
+                } : {}}
+                whileTap={isUnlocked ? { scale: 0.98 } : {}}
+              >
+                <div className="flex flex-col items-center justify-center h-full space-y-[var(--space-1)]">
                   {/* Plant image */}
-                  <div className="mb-3 flex aspect-square items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--surface-card-subtle-6)] to-[var(--surface-card-subtle-7)] p-4">
-                    <motion.img
+                  <div className="flex h-8 w-8 items-center justify-center">
+                    <img
                       src={plant.image}
-                      alt={plant.name}
-                      className="pixelated h-full w-auto object-contain"
+                      alt={plant.displayName}
+                      className="h-full w-full object-contain"
                       style={{
                         imageRendering: 'pixelated',
-                        filter: isUnlocked ? 'none' : 'grayscale(100%) brightness(0.5)',
-                      }}
-                      animate={isUnlocked ? {
-                        y: [0, -2, 0],
-                      } : {}}
-                      transition={{
-                        duration: 2.5,
-                        repeat: Infinity,
-                        ease: "easeInOut",
-                        delay: index * 0.2
+                        opacity: isUnlocked ? 1 : 0.4,
                       }}
                     />
                   </div>
                   
-                  {/* Plant info */}
-                  <div className="text-center">
-                    <h5 className="mb-1 text-sm font-light font-medium text-[var(--text-strong-alt)]">{plant.name}</h5>
-                    <p className="text-xs font-light text-[var(--text-caption-2)]">
-                      {isUnlocked ? `Level ${plant.unlockLevel}` : `Unlock at level ${plant.unlockLevel}`}
-                    </p>
-                  </div>
-                </motion.button>
+                  {/* Plant name */}
+                  <h5 className="text-xs font-medium text-[var(--text-strong-alt)] text-center leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full">
+                    {plant.displayName}
+                  </h5>
+                  
+                  {/* Status text */}
+                  <p className="text-xs text-[var(--text-caption-2)] text-center leading-tight">
+                    {unlockText}
+                  </p>
+                </div>
+              </motion.button>
               );
             })}
           </div>

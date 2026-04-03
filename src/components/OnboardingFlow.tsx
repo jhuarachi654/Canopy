@@ -138,7 +138,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       />
 
       {/* Content: max 393px (frame width), centered on large viewports */}
-      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[min(393px,100%)] flex-1 flex-col px-[var(--space-6)] sm:px-[var(--space-10)]">
+      <div className="relative z-10 mx-auto flex h-full w-full max-w-[min(393px,100%)] flex-1 flex-col px-[var(--space-6)] sm:px-[var(--space-10)]">
         {/* Header - pinned to top */}
         <div className="flex h-11 shrink-0 items-center justify-between">
           {currentStep > 0 ? (

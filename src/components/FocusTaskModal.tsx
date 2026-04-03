@@ -95,19 +95,31 @@ export default function FocusTaskModal({ isOpen, onClose, onConfirm, todo }: Foc
               <div className="flex flex-wrap gap-[var(--space-2)]">
                 <button
                   onClick={() => setTargetTime(15)}
-                  className="px-[var(--space-3)] py-[var(--space-1)] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97]"
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    setTargetTime(15);
+                  }}
+                  className="px-[var(--space-3)] py-[var(--space-2)] min-h-[44px] min-w-[44px] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] touch-manipulation"
                 >
                   15 min
                 </button>
                 <button
                   onClick={() => setTargetTime(25)}
-                  className="px-[var(--space-3)] py-[var(--space-1)] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97]"
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    setTargetTime(25);
+                  }}
+                  className="px-[var(--space-3)] py-[var(--space-2)] min-h-[44px] min-w-[44px] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] touch-manipulation"
                 >
                   25 min
                 </button>
                 <button
                   onClick={() => setTargetTime(45)}
-                  className="px-[var(--space-3)] py-[var(--space-1)] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97]"
+                  onTouchStart={(e) => {
+                    e.preventDefault();
+                    setTargetTime(45);
+                  }}
+                  className="px-[var(--space-3)] py-[var(--space-2)] min-h-[44px] min-w-[44px] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] touch-manipulation"
                 >
                   45 min
                 </button>

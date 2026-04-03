@@ -579,7 +579,16 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
             onClick={() => setShowMusicDropdown(!showMusicDropdown)}
             className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.97] touch-manipulation w-28"
           >
-            <Music className="h-4 w-4 flex-shrink-0" />
+            {/* Music icon with playing indicator */}
+            <div className="relative">
+              <Music className="h-4 w-4 flex-shrink-0" />
+              {isRunning && selectedMusic !== 'none' && (
+                <span className="absolute -top-1 -right-1 flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-teal-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-teal-500"></span>
+                </span>
+              )}
+            </div>
             <span className="capitalize truncate flex-1 min-w-0 text-left">{selectedMusic}</span>
             <ChevronDown className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${showMusicDropdown ? 'rotate-180' : ''}`} />
           </button>

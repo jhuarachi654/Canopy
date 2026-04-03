@@ -114,7 +114,7 @@ export default function SettingsScreen({
 
   return (
     <div className="min-h-screen bg-gray-50">
-      <div className="px-4 pt-4 pb-6">
+      <div className="px-4 pt-4 pb-6 overflow-y-auto" style={{ maxHeight: '100vh' }}>
         <h2 className="mb-6 font-serif text-4xl text-gray-900">Profile</h2>
 
         {/* Profile header */}

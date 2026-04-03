@@ -292,7 +292,7 @@ export default function JournalScreen({
       </div>
 
       {/* Content */}
-      <div className="px-4 py-6" style={{ paddingBottom: `${keyboardHeight + 100}px` }}>
+      <div className="px-4 py-6 overflow-y-auto" style={{ maxHeight: '100vh', paddingBottom: `${keyboardHeight + 100}px` }}>
           {/* Prompt Card */}
           <div className="mb-5 rounded-2xl bg-white px-5 pb-5 pt-5 shadow-sm">
             {/* Editing indicator */}

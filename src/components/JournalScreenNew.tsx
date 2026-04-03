@@ -285,7 +285,7 @@ export default function JournalScreen({
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header */}
-      <div className="px-4 pt-4 pb-2 bg-white/90 backdrop-blur-md border-b border-slate-200">
+      <div className="px-4 pt-4 pb-2">
         <h2 className="type-label mb-3 uppercase tracking-widest text-gray-400">TODAY'S REFLECTION</h2>
         <h2 className="mb-0 font-serif text-[2.6rem] leading-tight text-[var(--text-strong-alt)]">Journal</h2>
         <p className="mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">A few words go a long way.</p>

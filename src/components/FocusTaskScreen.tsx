@@ -42,7 +42,6 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('Mouse down on plant:', plantData.plant.name);
     setIsDragging(true);
     setDragStart({
       x: e.clientX - plantData.position.x,
@@ -50,33 +49,53 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
     });
   };
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const touch = e.touches[0];
+    setIsDragging(true);
+    setDragStart({
+      x: touch.clientX - plantData.position.x,
+      y: touch.clientY - plantData.position.y
+    });
+  };
+
   const handleMouseMove = useCallback((e: MouseEvent) => {
     if (!isDragging) return;
-
-    console.log('Dragging plant:', plantData.plant.name, 'to:', e.clientX, e.clientY);
-
     const newX = e.clientX - dragStart.x;
     const newY = e.clientY - dragStart.y;
-
-    // Keep within screen boundaries (accounting for plant size)
     const maxX = window.innerWidth - 100;
     const maxY = window.innerHeight - 100;
-    
     const constrainedX = Math.max(0, Math.min(newX, maxX));
     const constrainedY = Math.max(0, Math.min(newY, maxY));
+    onPositionChange({ x: constrainedX, y: constrainedY });
+  }, [isDragging, dragStart, onPositionChange]);
 
-    console.log('Constrained position:', constrainedX, constrainedY);
-
-    onPositionChange({
-      x: constrainedX,
-      y: constrainedY
-    });
-  }, [isDragging, dragStart, onPositionChange, plantData.plant.name]);
+  const handleTouchMove = useCallback((e: TouchEvent) => {
+    if (!isDragging) return;
+    const touch = e.touches[0];
+    const newX = touch.clientX - dragStart.x;
+    const newY = touch.clientY - dragStart.y;
+    const maxX = window.innerWidth - 100;
+    const maxY = window.innerHeight - 100;
+    const constrainedX = Math.max(0, Math.min(newX, maxX));
+    const constrainedY = Math.max(0, Math.min(newY, maxY));
+    onPositionChange({ x: constrainedX, y: constrainedY });
+  }, [isDragging, dragStart, onPositionChange]);
 
   const handleMouseUp = useCallback(() => {
     if (isDragging) {
       setIsDragging(false);
-      // Snap to good position and settle
+      onPositionChange({
+        x: Math.round(plantData.position.x / 20) * 20,
+        y: Math.round(plantData.position.y / 20) * 20
+      });
+    }
+  }, [isDragging, plantData.position, onPositionChange]);
+
+  const handleTouchEnd = useCallback(() => {
+    if (isDragging) {
+      setIsDragging(false);
       onPositionChange({
         x: Math.round(plantData.position.x / 20) * 20,
         y: Math.round(plantData.position.y / 20) * 20
@@ -88,14 +107,18 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
     if (isDragging) {
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleTouchEnd);
       return () => {
         document.removeEventListener('mousemove', handleMouseMove);
         document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleTouchEnd);
       };
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
 
-  // Proximity detection
+  // Proximity detection (mouse only - hover doesn't exist on mobile)
   useEffect(() => {
     const handleGlobalMouseMove = (e: MouseEvent) => {
       if (isDragging) return;
@@ -143,6 +166,7 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
       onHoverStart={() => setIsHovered(true)}
       onHoverEnd={() => setIsHovered(false)}
       onMouseDown={handleMouseDown}
+      onTouchStart={handleTouchStart}
       onClick={() => !isDragging && console.log(`Clicked on ${plantData.plant.name}`)}
       className={`absolute z-50 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
       style={{

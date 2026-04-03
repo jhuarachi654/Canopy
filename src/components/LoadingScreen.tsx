@@ -17,7 +17,7 @@ export default function LoadingScreen({ onLoadingComplete }: LoadingScreenProps)
   const handleMouseDown = () => {
     setIsPressed(true);
   };
-  
+
   const handleMouseUp = () => {
     if (slideProgress > 0.8) {
       // Slid far enough - complete
@@ -31,13 +31,41 @@ export default function LoadingScreen({ onLoadingComplete }: LoadingScreenProps)
       setSlideProgress(0);
     }
   };
-  
+
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isPressed) return;
-    
+
     const button = e.currentTarget;
     const rect = button.getBoundingClientRect();
     const x = e.clientX - rect.left;
+    const progress = Math.min(Math.max(x / rect.width, 0), 1);
+    setSlideProgress(progress);
+  };
+
+  // Touch event handlers for mobile
+  const handleTouchStart = () => {
+    setIsPressed(true);
+  };
+
+  const handleTouchEnd = () => {
+    if (slideProgress > 0.8) {
+      setIsComplete(true);
+      setTimeout(() => {
+        onLoadingComplete();
+      }, 300);
+    } else {
+      setIsPressed(false);
+      setSlideProgress(0);
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (!isPressed) return;
+
+    const button = e.currentTarget;
+    const rect = button.getBoundingClientRect();
+    const touch = e.touches[0];
+    const x = touch.clientX - rect.left;
     const progress = Math.min(Math.max(x / rect.width, 0), 1);
     setSlideProgress(progress);
   };
@@ -103,6 +131,9 @@ export default function LoadingScreen({ onLoadingComplete }: LoadingScreenProps)
             onMouseUp={handleMouseUp}
             onMouseMove={handleMouseMove}
             onMouseLeave={handleMouseUp}
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+            onTouchMove={handleTouchMove}
             className={`mb-4 w-full max-w-[248px] rounded-full border border-white/10 bg-[#2D2B3E] px-10 py-4 text-lg font-light text-white shadow-lg transition-all duration-200 cursor-pointer select-none overflow-hidden relative ${
               isPressed ? 'scale-95' : 'hover:bg-[#232136]'
             }`}

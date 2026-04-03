@@ -66,8 +66,30 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
     const newY = e.clientY - dragStart.y;
     const maxX = window.innerWidth - 100;
     const maxY = window.innerHeight - 100;
-    const constrainedX = Math.max(0, Math.min(newX, maxX));
-    const constrainedY = Math.max(0, Math.min(newY, maxY));
+    
+    // Define restricted zones (center area for timer, buttons, and text)
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const restrictedZone = {
+      left: centerX - 200,
+      right: centerX + 200,
+      top: centerY - 300,
+      bottom: centerY + 200
+    };
+    
+    let constrainedX = Math.max(0, Math.min(newX, maxX));
+    let constrainedY = Math.max(0, Math.min(newY, maxY));
+    
+    // Check if plant would overlap with restricted zone
+    const plantRight = constrainedX + 100;
+    const plantBottom = constrainedY + 100;
+    
+    if (constrainedX < restrictedZone.right && plantRight > restrictedZone.left &&
+        constrainedY < restrictedZone.bottom && plantBottom > restrictedZone.top) {
+      // Plant is in restricted zone, keep it at previous position
+      return;
+    }
+    
     onPositionChange({ x: constrainedX, y: constrainedY });
   }, [isDragging, dragStart, onPositionChange]);
 
@@ -78,8 +100,30 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
     const newY = touch.clientY - dragStart.y;
     const maxX = window.innerWidth - 100;
     const maxY = window.innerHeight - 100;
-    const constrainedX = Math.max(0, Math.min(newX, maxX));
-    const constrainedY = Math.max(0, Math.min(newY, maxY));
+    
+    // Define restricted zones (center area for timer, buttons, and text)
+    const centerX = window.innerWidth / 2;
+    const centerY = window.innerHeight / 2;
+    const restrictedZone = {
+      left: centerX - 200,
+      right: centerX + 200,
+      top: centerY - 300,
+      bottom: centerY + 200
+    };
+    
+    let constrainedX = Math.max(0, Math.min(newX, maxX));
+    let constrainedY = Math.max(0, Math.min(newY, maxY));
+    
+    // Check if plant would overlap with restricted zone
+    const plantRight = constrainedX + 100;
+    const plantBottom = constrainedY + 100;
+    
+    if (constrainedX < restrictedZone.right && plantRight > restrictedZone.left &&
+        constrainedY < restrictedZone.bottom && plantBottom > restrictedZone.top) {
+      // Plant is in restricted zone, keep it at previous position
+      return;
+    }
+    
     onPositionChange({ x: constrainedX, y: constrainedY });
   }, [isDragging, dragStart, onPositionChange]);
 

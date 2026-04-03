@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useImperativeHandle } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Play, Pause, RotateCcw, Coffee, Flower, TreePine, Sprout, Target, ChevronDown, Music } from 'lucide-react';
+import { X, Play, Pause, RotateCcw, Coffee, Flower, TreePine, Sprout, Target, ChevronDown, Music, Volume2, VolumeX } from 'lucide-react';
 import type { Todo } from '../App';
 
 interface Plant {
@@ -363,23 +363,23 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
     };
   }, [isRunning, timeLeft, isBreak, targetTime]);
 
-  // Handle ambient music playback
+  // Handle music playback with local MP3 files
   useEffect(() => {
-    // Music URLs from Pixabay (royalty-free)
+    // Local audio file paths - using public folder
     const musicUrls: Record<string, string> = {
-      'ambiance': 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf77a.mp3?filename=soft-piano-100-bpm-121529.mp3',
-      'lofi': 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_c8c8a73467.mp3?filename=lofi-study-1128.mp3',
-      'techno': 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=electronic-future-beats-1178.mp3',
-      'upbeat': 'https://cdn.pixabay.com/download/audio/2022/01/14/audio_01c6d3a0b9.mp3?filename=upbeat-rock-1024.mp3'
+      'ambiance': '/assets/audio/Ambiance.mp3',
+      'lofi': '/assets/audio/Lofi.mp3',
+      'techno': '/assets/audio/Techno.mp3',
+      'upbeat': '/assets/audio/Upbeat.mp3'
     };
 
+    // Only play when timer is running and music is selected
     if (isRunning && selectedMusic !== 'none') {
-      // Create or update audio
+      // Create audio element if it doesn't exist
       if (!audioRef.current) {
         audioRef.current = new Audio();
         audioRef.current.loop = true;
         audioRef.current.volume = 0.3;
-        audioRef.current.crossOrigin = 'anonymous';
       }
       
       // Update source if music type changed
@@ -387,33 +387,40 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
       if (musicUrl && audioRef.current.src !== musicUrl) {
         audioRef.current.src = musicUrl;
         audioRef.current.load(); // Load the new source
+        console.log('Loading audio:', musicUrl);
       }
       
       // Play the music with better error handling
-      const playAudio = () => {
-        if (audioRef.current) {
-          audioRef.current.play().catch((err) => {
-            console.log('Audio play error:', err);
-            // If autoplay blocked, we need user interaction
+      const playAudio = async () => {
+        try {
+          await audioRef.current?.play();
+          console.log('Audio playing successfully');
+        } catch (err) {
+          console.error('Audio play error:', err);
+          if (err instanceof Error) {
             if (err.name === 'NotAllowedError') {
-              console.log('Autoplay blocked - will try after user interaction');
+              console.log('Autoplay blocked - user interaction required');
+            } else if (err.name === 'NotFoundError') {
+              console.log('Audio file not found:', musicUrl);
             }
-          });
+          }
         }
       };
       
-      // Small delay to ensure audio is loaded
-      setTimeout(playAudio, 100);
+      playAudio();
     } else {
-      // Pause when timer stops
+      // Pause when timer is stopped or music is none
       if (audioRef.current) {
         audioRef.current.pause();
+        console.log('Audio paused');
       }
     }
 
+    // Cleanup on unmount
     return () => {
       if (audioRef.current) {
         audioRef.current.pause();
+        audioRef.current = null;
       }
     };
   }, [isRunning, selectedMusic]);
@@ -621,10 +628,7 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
 
         {/* Music Dropdown */}
         <div className="relative z-[101]">
-          <button
-            onClick={() => setShowMusicDropdown(!showMusicDropdown)}
-            className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.97] touch-manipulation w-28"
-          >
+          <div className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out w-28">
             {/* Music icon with playing indicator */}
             <div className="relative">
               <Music className="h-4 w-4 flex-shrink-0" />
@@ -635,9 +639,32 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
                 </span>
               )}
             </div>
-            <span className="capitalize truncate flex-1 min-w-0 text-left">{selectedMusic}</span>
-            <ChevronDown className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${showMusicDropdown ? 'rotate-180' : ''}`} />
-          </button>
+            
+            {/* Main button area - toggles enable/disable */}
+            <button
+              onClick={() => {
+                if (selectedMusic === 'none') {
+                  setSelectedMusic('lofi'); // Enable with default
+                } else {
+                  setSelectedMusic('none'); // Disable
+                }
+              }}
+              className="capitalize truncate flex-1 min-w-0 text-left hover:text-[var(--text-body)] transition-colors"
+            >
+              {selectedMusic === 'none' ? 'Off' : selectedMusic}
+            </button>
+            
+            {/* Dropdown arrow - opens menu */}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowMusicDropdown(!showMusicDropdown);
+              }}
+              className="flex-shrink-0 hover:text-[var(--text-body)] transition-colors"
+            >
+              <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showMusicDropdown ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
 
           <AnimatePresence>
             {showMusicDropdown && (
@@ -648,7 +675,7 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
                 transition={{ duration: 0.15 }}
                 className="absolute right-0 top-full mt-2 w-40 rounded-[var(--radius-lg)] border border-[var(--border-soft)] bg-[var(--surface-base)] shadow-[var(--shadow-card-strong)] overflow-hidden z-[9999]"
               >
-                {['ambiance', 'lofi', 'techno', 'upbeat'].map((option) => (
+                {['ambiance', 'lofi', 'techno', 'upbeat', 'none'].map((option) => (
                   <button
                     key={option}
                     onClick={() => {
@@ -661,7 +688,7 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
                         : 'text-[var(--text-body-muted)]'
                     }`}
                   >
-                    {option}
+                    {option === 'none' ? 'Mute' : option}
                   </button>
                 ))}
               </motion.div>

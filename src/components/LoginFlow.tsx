@@ -24,9 +24,7 @@ const LoginFlow: React.FC<LoginFlowProps> = ({ onAuthSuccess, onGuestMode }) => 
   const supabase = getSupabaseClient();
 
   const handleSubmit = async () => {
-    alert('Mock sign-up successful!'); // Debug alert
-    
-    // For prototype - just advance to next screen
+    // For prototype - just advance to next screen without alert
     const uniqueId = `mock-user-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
     const mockUser = {
       id: uniqueId,

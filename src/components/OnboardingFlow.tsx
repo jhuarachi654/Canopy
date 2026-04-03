@@ -138,7 +138,9 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                 ? 'flex w-full min-h-0 flex-col pb-[var(--space-5)] pt-[clamp(var(--space-3),min(14dvh,4rem),5rem)]'
                 : currentStep === 3
                   ? 'my-auto flex w-full min-h-0 flex-col py-[var(--space-2)]'
-                  : 'my-auto flex w-full min-h-0 flex-col py-[var(--space-6)]'
+                  : currentStep === 2
+                    ? 'flex w-full min-h-0 flex-col py-[var(--space-4)]'
+                    : 'my-auto flex w-full min-h-0 flex-col py-[var(--space-6)]'
             }
           >
             <AnimatePresence mode="wait">

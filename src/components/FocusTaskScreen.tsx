@@ -212,22 +212,56 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
   const [isIntro, setIsIntro] = useState(true);
   const proximityStates = useRef<Map<string, { isNear: boolean, distance: number }>>(new Map());
 
-  // Generate strategic positions for plants in corners/edges, avoiding center content area
+  // Generate strategic positions for plants along the perimeter, avoiding center content area
   useEffect(() => {
     const unlockedPlants = mockPlants.filter(plant => plant.unlocked);
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    const centerX = w / 2;
+    const centerY = h / 2;
     
-    // Define strategic corner positions (away from center timer and buttons)
-    const cornerPositions = [
-      { x: 60, y: 80 },           // Top-left
-      { x: window.innerWidth - 140, y: 60 },  // Top-right
-      { x: 40, y: window.innerHeight / 2 - 100 }, // Mid-left
-      { x: window.innerWidth - 120, y: window.innerHeight / 2 - 80 }, // Mid-right
-      { x: 80, y: window.innerHeight - 250 },  // Bottom-left (above buttons)
-      { x: window.innerWidth - 100, y: window.innerHeight - 280 }, // Bottom-right (above nav)
-    ];
+    // Define perimeter positions - strictly on edges, avoiding center 60% of screen
+    const edgeMargin = 120; // Space from very edge
+    const safeZoneX = w * 0.25; // Safe zone starts at 25% from left
+    const safeZoneRight = w * 0.75; // Safe zone ends at 75% from left
+    
+    // Calculate positions strictly around the perimeter
+    const perimeterPositions: { x: number; y: number }[] = [];
+    
+    // Top edge (avoiding header area and center)
+    const topY = edgeMargin;
+    for (let i = 0; i < 3; i++) {
+      perimeterPositions.push({ x: edgeMargin + i * ((safeZoneX - edgeMargin * 2) / 2), y: topY });
+      perimeterPositions.push({ x: safeZoneRight + i * ((w - safeZoneRight - edgeMargin) / 2), y: topY });
+    }
+    
+    // Bottom edge (above safe area)
+    const bottomY = h - edgeMargin - 100;
+    for (let i = 0; i < 2; i++) {
+      perimeterPositions.push({ x: edgeMargin + i * 150, y: bottomY });
+      perimeterPositions.push({ x: w - edgeMargin - 100 - i * 150, y: bottomY });
+    }
+    
+    // Left edge (middle area, avoiding top header and bottom buttons)
+    const leftX = edgeMargin;
+    for (let i = 0; i < 3; i++) {
+      const yPos = h * 0.3 + i * (h * 0.4 / 2);
+      if (yPos > 180 && yPos < h - 200) { // Avoid header and bottom controls
+        perimeterPositions.push({ x: leftX, y: yPos });
+      }
+    }
+    
+    // Right edge (middle area)
+    const rightX = w - edgeMargin - 100;
+    for (let i = 0; i < 3; i++) {
+      const yPos = h * 0.3 + i * (h * 0.4 / 2);
+      if (yPos > 180 && yPos < h - 200) {
+        perimeterPositions.push({ x: rightX, y: yPos });
+      }
+    }
     
     const positions: PlantPosition[] = unlockedPlants.map((plant, index) => {
-      const position = cornerPositions[index % cornerPositions.length];
+      const position = perimeterPositions[index % perimeterPositions.length] || { x: edgeMargin, y: h * 0.4 };
       return { plant, position };
     });
     

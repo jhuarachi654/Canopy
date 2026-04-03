@@ -172,8 +172,8 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
       style={{
         left: `${plantData.position.x}px`,
         top: `${plantData.position.y}px`,
-        width: '100px',
-        height: '100px',
+        width: '80px',
+        height: '80px',
         filter: isDragging ? 'drop-shadow(0 10px 20px rgba(0,0,0,0.2))' : 'none'
       }}
     >
@@ -212,53 +212,44 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
   const [isIntro, setIsIntro] = useState(true);
   const proximityStates = useRef<Map<string, { isNear: boolean, distance: number }>>(new Map());
 
-  // Generate strategic positions for plants along the perimeter, avoiding center content area
+  // Generate strategic positions for plants along the entire perimeter
   useEffect(() => {
     const unlockedPlants = mockPlants.filter(plant => plant.unlocked);
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const centerX = w / 2;
-    const centerY = h / 2;
     
-    // Define perimeter positions - strictly on edges, avoiding center 60% of screen
-    const edgeMargin = 120; // Space from very edge
-    const safeZoneX = w * 0.25; // Safe zone starts at 25% from left
-    const safeZoneRight = w * 0.75; // Safe zone ends at 75% from left
+    // Define perimeter positions - all around the edges
+    const edgeMargin = 80; // Space from very edge
+    const plantSize = 80; // Scaled plant size (0.8x of 100)
     
-    // Calculate positions strictly around the perimeter
+    // Calculate positions around the entire perimeter
     const perimeterPositions: { x: number; y: number }[] = [];
     
-    // Top edge (avoiding header area and center)
-    const topY = edgeMargin;
-    for (let i = 0; i < 3; i++) {
-      perimeterPositions.push({ x: edgeMargin + i * ((safeZoneX - edgeMargin * 2) / 2), y: topY });
-      perimeterPositions.push({ x: safeZoneRight + i * ((w - safeZoneRight - edgeMargin) / 2), y: topY });
-    }
+    // Top left area (avoiding header title)
+    perimeterPositions.push({ x: edgeMargin, y: edgeMargin + 60 });
+    perimeterPositions.push({ x: edgeMargin + plantSize + 20, y: edgeMargin + 40 });
     
-    // Bottom edge (above safe area)
-    const bottomY = h - edgeMargin - 100;
-    for (let i = 0; i < 2; i++) {
-      perimeterPositions.push({ x: edgeMargin + i * 150, y: bottomY });
-      perimeterPositions.push({ x: w - edgeMargin - 100 - i * 150, y: bottomY });
-    }
+    // Top right area (avoiding music dropdown)
+    perimeterPositions.push({ x: w - edgeMargin - plantSize, y: edgeMargin + 60 });
+    perimeterPositions.push({ x: w - edgeMargin - plantSize * 2 - 20, y: edgeMargin + 40 });
     
-    // Left edge (middle area, avoiding top header and bottom buttons)
-    const leftX = edgeMargin;
-    for (let i = 0; i < 3; i++) {
-      const yPos = h * 0.3 + i * (h * 0.4 / 2);
-      if (yPos > 180 && yPos < h - 200) { // Avoid header and bottom controls
-        perimeterPositions.push({ x: leftX, y: yPos });
-      }
-    }
+    // Bottom left area (near play button)
+    const bottomY = h - edgeMargin - plantSize - 80; // Above bottom nav
+    perimeterPositions.push({ x: edgeMargin, y: bottomY });
+    perimeterPositions.push({ x: edgeMargin + plantSize + 20, y: bottomY + 20 });
     
-    // Right edge (middle area)
-    const rightX = w - edgeMargin - 100;
-    for (let i = 0; i < 3; i++) {
-      const yPos = h * 0.3 + i * (h * 0.4 / 2);
-      if (yPos > 180 && yPos < h - 200) {
-        perimeterPositions.push({ x: rightX, y: yPos });
-      }
-    }
+    // Bottom right area (near coffee button)
+    perimeterPositions.push({ x: w - edgeMargin - plantSize, y: bottomY });
+    perimeterPositions.push({ x: w - edgeMargin - plantSize * 2 - 20, y: bottomY + 20 });
+    
+    // Left side middle
+    const leftMiddleY = h * 0.35;
+    perimeterPositions.push({ x: edgeMargin, y: leftMiddleY });
+    perimeterPositions.push({ x: edgeMargin, y: leftMiddleY + plantSize + 30 });
+    
+    // Right side middle
+    perimeterPositions.push({ x: w - edgeMargin - plantSize, y: leftMiddleY });
+    perimeterPositions.push({ x: w - edgeMargin - plantSize, y: leftMiddleY + plantSize + 30 });
     
     const positions: PlantPosition[] = unlockedPlants.map((plant, index) => {
       const position = perimeterPositions[index % perimeterPositions.length] || { x: edgeMargin, y: h * 0.4 };
@@ -609,11 +600,11 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
         <div className="relative z-[101]">
           <button
             onClick={() => setShowMusicDropdown(!showMusicDropdown)}
-            className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.97] touch-manipulation"
+            className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.97] touch-manipulation w-28"
           >
-            <Music className="h-4 w-4" />
-            <span className="capitalize">{selectedMusic}</span>
-            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showMusicDropdown ? 'rotate-180' : ''}`} />
+            <Music className="h-4 w-4 flex-shrink-0" />
+            <span className="capitalize truncate flex-1 min-w-0 text-left">{selectedMusic}</span>
+            <ChevronDown className={`h-4 w-4 flex-shrink-0 transition-transform duration-200 ${showMusicDropdown ? 'rotate-180' : ''}`} />
           </button>
 
           <AnimatePresence>

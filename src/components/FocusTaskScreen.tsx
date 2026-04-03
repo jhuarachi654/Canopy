@@ -67,27 +67,34 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
     const maxX = window.innerWidth - 100;
     const maxY = window.innerHeight - 100;
     
-    // Define restricted zones (header + center area for timer, buttons, and text)
+    // Define multiple restricted zones for specific UI elements
     const centerX = window.innerWidth / 2;
     const centerY = window.innerHeight / 2;
-    const restrictedZone = {
-      left: centerX - 200,
-      right: centerX + 200,
-      top: 0,  // Include entire header area from top
-      bottom: centerY + 200
-    };
+    
+    const restrictedZones = [
+      // Header area (title, subtitle, music dropdown)
+      { left: 0, right: window.innerWidth, top: 0, bottom: 140 },
+      // Task title area ("FOCUSING ON:" + task name)
+      { left: centerX - 250, right: centerX + 250, top: 140, bottom: 240 },
+      // Timer area
+      { left: centerX - 150, right: centerX + 150, top: centerY - 150, bottom: centerY + 150 },
+      // Control buttons area
+      { left: centerX - 150, right: centerX + 150, top: centerY + 150, bottom: centerY + 250 }
+    ];
     
     let constrainedX = Math.max(0, Math.min(newX, maxX));
     let constrainedY = Math.max(0, Math.min(newY, maxY));
     
-    // Check if plant would overlap with restricted zone
+    // Check if plant would overlap with any restricted zone
     const plantRight = constrainedX + 100;
     const plantBottom = constrainedY + 100;
     
-    if (constrainedX < restrictedZone.right && plantRight > restrictedZone.left &&
-        constrainedY < restrictedZone.bottom && plantBottom > restrictedZone.top) {
-      // Plant is in restricted zone, keep it at previous position
-      return;
+    for (const zone of restrictedZones) {
+      if (constrainedX < zone.right && plantRight > zone.left &&
+          constrainedY < zone.bottom && plantBottom > zone.top) {
+        // Plant is in restricted zone, keep it at previous position
+        return;
+      }
     }
     
     onPositionChange({ x: constrainedX, y: constrainedY });
@@ -101,27 +108,34 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
     const maxX = window.innerWidth - 100;
     const maxY = window.innerHeight - 100;
     
-    // Define restricted zones (header + center area for timer, buttons, and text)
+    // Define multiple restricted zones for specific UI elements
     const centerX = window.innerWidth / 2;
     const centerY = window.innerHeight / 2;
-    const restrictedZone = {
-      left: centerX - 200,
-      right: centerX + 200,
-      top: 0,  // Include entire header area from top
-      bottom: centerY + 200
-    };
+    
+    const restrictedZones = [
+      // Header area (title, subtitle, music dropdown)
+      { left: 0, right: window.innerWidth, top: 0, bottom: 140 },
+      // Task title area ("FOCUSING ON:" + task name)
+      { left: centerX - 250, right: centerX + 250, top: 140, bottom: 240 },
+      // Timer area
+      { left: centerX - 150, right: centerX + 150, top: centerY - 150, bottom: centerY + 150 },
+      // Control buttons area
+      { left: centerX - 150, right: centerX + 150, top: centerY + 150, bottom: centerY + 250 }
+    ];
     
     let constrainedX = Math.max(0, Math.min(newX, maxX));
     let constrainedY = Math.max(0, Math.min(newY, maxY));
     
-    // Check if plant would overlap with restricted zone
+    // Check if plant would overlap with any restricted zone
     const plantRight = constrainedX + 100;
     const plantBottom = constrainedY + 100;
     
-    if (constrainedX < restrictedZone.right && plantRight > restrictedZone.left &&
-        constrainedY < restrictedZone.bottom && plantBottom > restrictedZone.top) {
-      // Plant is in restricted zone, keep it at previous position
-      return;
+    for (const zone of restrictedZones) {
+      if (constrainedX < zone.right && plantRight > zone.left &&
+          constrainedY < zone.bottom && plantBottom > zone.top) {
+        // Plant is in restricted zone, keep it at previous position
+        return;
+      }
     }
     
     onPositionChange({ x: constrainedX, y: constrainedY });

@@ -67,13 +67,13 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
     const maxX = window.innerWidth - 100;
     const maxY = window.innerHeight - 100;
     
-    // Define restricted zones (center area for timer, buttons, and text)
+    // Define restricted zones (header + center area for timer, buttons, and text)
     const centerX = window.innerWidth / 2;
     const centerY = window.innerHeight / 2;
     const restrictedZone = {
       left: centerX - 200,
       right: centerX + 200,
-      top: centerY - 300,
+      top: 0,  // Include entire header area from top
       bottom: centerY + 200
     };
     
@@ -101,13 +101,13 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
     const maxX = window.innerWidth - 100;
     const maxY = window.innerHeight - 100;
     
-    // Define restricted zones (center area for timer, buttons, and text)
+    // Define restricted zones (header + center area for timer, buttons, and text)
     const centerX = window.innerWidth / 2;
     const centerY = window.innerHeight / 2;
     const restrictedZone = {
       left: centerX - 200,
       right: centerX + 200,
-      top: centerY - 300,
+      top: 0,  // Include entire header area from top
       bottom: centerY + 200
     };
     

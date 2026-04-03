@@ -122,6 +122,9 @@ export default function JournalScreen({
     const prompt = DAILY_PROMPTS[currentPromptIndex];
     onAddEntry(prompt, response.trim(), false, undefined, photoPreview[0] || undefined);
     
+    // Reset scroll position after saving
+    window.scrollTo(0, 0);
+    
     setResponse('');
     setPhotoPreview([]);
     setShowMoodSelector(true);
@@ -205,6 +208,9 @@ export default function JournalScreen({
     
     onUpdateEntry(editingEntryId, response.trim(), photoPreview[0]);
     
+    // Reset scroll position after updating
+    window.scrollTo(0, 0);
+    
     setResponse('');
     setPhotoPreview([]);
     setIsEditing(false);
@@ -227,21 +233,24 @@ export default function JournalScreen({
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
-    <div className="flex flex-col h-[calc(100dvh-180px)]">
-      {/* Main Content */}
-      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-[calc(10rem+env(safe-area-inset-bottom))] pt-[max(1rem,env(safe-area-inset-top))]">
-        {/* Header */}
+    <div className="flex flex-col h-full" style={{ minHeight: '100dvh' }}>
+      {/* Header - pinned to top */}
+      <div className="shrink-0 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4">
         <h2 className="type-label mb-3 uppercase tracking-widest text-gray-400">TODAY'S REFLECTION</h2>
         <h2 className="mb-0 font-serif text-[2.6rem] leading-tight text-[var(--text-strong-alt)]">Journal</h2>
         <p className="mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">A few words go a long way.</p>
+      </div>
 
-        {/* Prompt Card */}
-        <div className="mb-5 mt-7 rounded-2xl bg-white px-5 pb-5 pt-5 shadow-sm">
-          {/* Editing indicator */}
-          {isEditing && (
-            <div className="text-center mb-4">
-              <span className="type-caption text-teal-500">✏️ Editing Entry</span>
-            </div>
+      {/* Middle content - flexible space that absorbs keyboard */}
+      <div className="flex-1 overflow-hidden">
+        <div className="custom-scrollbar h-full overflow-y-auto overscroll-y-contain px-4">
+          {/* Prompt Card */}
+          <div className="mb-5 rounded-2xl bg-white px-5 pb-5 pt-5 shadow-sm">
+            {/* Editing indicator */}
+            {isEditing && (
+              <div className="text-center mb-4">
+                <span className="type-caption text-teal-500">✏️ Editing Entry</span>
+              </div>
           )}
           
           {/* Category label */}
@@ -276,18 +285,9 @@ export default function JournalScreen({
             </AnimatePresence>
           </div>
 
-          {/* Text area */}
-          <textarea
-            value={response}
-            onChange={(e) => setResponse(e.target.value)}
-            placeholder="Answer here..."
-            aria-label="Journal response"
-            className="type-body min-h-[116px] w-full resize-none rounded-xl border border-[var(--accent-soft-border-2)] bg-[var(--surface-base)] p-4 text-[var(--text-strong-alt)] placeholder:text-[var(--text-caption-4)] focus:border-[var(--accent-pill)] focus:outline-none focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-journal)]"
-          />
-
           {/* Photo preview if exists */}
           {photoPreview.length > 0 && (
-            <div className="flex gap-3 mt-4 mb-4 flex-wrap">
+            <div className="flex gap-3 mb-4 flex-wrap">
               {photoPreview.map((photo, index) => (
                 <div 
                   key={index}
@@ -309,109 +309,124 @@ export default function JournalScreen({
                   {/* Remove button */}
                   <button
                     type="button"
-                    onClick={() => removePhoto(index)}
-                    className="absolute -right-2 -top-2 rounded-full bg-[var(--accent-teal)] p-1 text-white shadow-md transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+                    onClick={() => {
+                      const newPreview = photoPreview.filter((_, i) => i !== index);
+                      setPhotoPreview(newPreview);
+                    }}
+                    className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                   >
-                    <X className="w-3 h-3" />
+                    <X className="h-3 w-3" />
                   </button>
                 </div>
               ))}
             </div>
           )}
+        </div>
+      </div>
 
-          {/* Bottom actions */}
-          <div className="mt-3 flex items-center justify-between border-t border-gray-100 pt-3">
-            {/* Photo upload with menu */}
-            <div className="relative photo-menu-container">
+      {/* Bottom input section - pinned to bottom for keyboard */}
+      <div className="shrink-0 bg-white border-t border-gray-100 px-4 pb-[max(env(safe-area-inset-bottom),var(--space-4))] pt-4">
+        {/* Text area */}
+        <textarea
+          value={response}
+          onChange={(e) => setResponse(e.target.value)}
+          placeholder="Answer here..."
+          aria-label="Journal response"
+          className="type-body min-h-[116px] w-full resize-none rounded-xl border border-[var(--accent-soft-border-2)] bg-[var(--surface-base)] p-4 text-[var(--text-strong-alt)] placeholder:text-[var(--text-caption-4)] focus:border-[var(--accent-pill)] focus:outline-none focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-journal)]"
+        />
+
+        {/* Bottom actions */}
+        <div className="mt-3 flex items-center justify-between">
+          {/* Photo upload with menu */}
+          <div className="relative photo-menu-container">
+            <button
+              type="button"
+              onClick={() => setShowPhotoMenu(!showPhotoMenu)}
+              disabled={photoPreview.length >= 3}
+              className={`flex items-center gap-2 transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
+                photoPreview.length >= 3 
+                  ? 'text-gray-300' 
+                  : 'cursor-pointer text-gray-400 hover:text-[var(--text-body-muted)]'
+              }`}
+            >
+              <ImagePlus className="w-5 h-5" />
+              <span className="type-caption">
+                {photoPreview.length === 0 ? 'Add a photo' : `Add photo (${photoPreview.length}/3)`}
+              </span>
+            </button>
+
+            {/* Photo options menu */}
+            <AnimatePresence>
+              {showPhotoMenu && photoPreview.length < 3 && (
+                <motion.div
+                  initial={{ opacity: 0, y: -10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  className="absolute bottom-full left-0 z-10 mb-2 overflow-hidden rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-base)] shadow-lg"
+                >
+                  {/* Camera option */}
+                  <label className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--surface-hover-panel-muted)]">
+                    <Camera className="h-5 w-5 text-[var(--text-caption-2)]" />
+                    <span className="type-caption text-[var(--text-strong-alt)]">Take photo</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => handlePhotoSelect(e)}
+                      className="hidden"
+                    />
+                  </label>
+                  {/* Gallery option */}
+                  <label className="flex cursor-pointer items-center gap-3 border-t border-[var(--border-soft)] px-4 py-3 transition-colors hover:bg-[var(--surface-hover-panel-muted)]">
+                    <Image className="h-5 w-5 text-[var(--text-caption-2)]" />
+                    <span className="type-caption text-[var(--text-strong-alt)]">Choose from gallery</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => handlePhotoSelect(e)}
+                      className="hidden"
+                    />
+                  </label>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Save/Update buttons */}
+          {isEditing ? (
+            <div className="flex gap-2">
               <button
                 type="button"
-                onClick={() => setShowPhotoMenu(!showPhotoMenu)}
-                disabled={photoPreview.length >= 3}
-                className={`flex items-center gap-2 transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
-                  photoPreview.length >= 3 
-                    ? 'text-gray-300' 
-                    : 'cursor-pointer text-gray-400 hover:text-[var(--text-body-muted)]'
-                }`}
+                onClick={handleCancelEdit}
+                className="type-body rounded-full bg-[var(--surface-panel-track-disabled)] px-6 py-3 text-[var(--text-body-muted)] transition-all duration-150 ease-out hover:bg-[var(--surface-panel-track-neutral)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <ImagePlus className="w-5 h-5" />
-                <span className="type-caption">
-                  {photoPreview.length === 0 ? 'Add a photo' : `Add photo (${photoPreview.length}/3)`}
-                </span>
+                Cancel
               </button>
-
-              {/* Photo options menu */}
-              <AnimatePresence>
-                {showPhotoMenu && photoPreview.length < 3 && (
-                  <motion.div
-                    initial={{ opacity: 0, y: -10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="absolute bottom-full left-0 z-10 mb-2 overflow-hidden rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-base)] shadow-lg"
-                  >
-                    {/* Camera option */}
-                    <label className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--surface-hover-panel-muted)]">
-                      <Camera className="h-5 w-5 text-[var(--text-caption-2)]" />
-                      <span className="type-caption text-[var(--text-strong-alt)]">Take photo</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        capture="environment"
-                        onChange={handlePhotoSelect}
-                        className="hidden"
-                      />
-                    </label>
-
-                    {/* Gallery option */}
-                    <label className="flex cursor-pointer items-center gap-3 border-t border-[var(--border-soft)] px-4 py-3 transition-colors hover:bg-[var(--surface-hover-panel-muted)]">
-                      <Image className="h-5 w-5 text-[var(--text-caption-2)]" />
-                      <span className="type-caption text-[var(--text-strong-alt)]">Choose from gallery</span>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={handlePhotoSelect}
-                        className="hidden"
-                      />
-                    </label>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            {/* Save/Update buttons */}
-            {isEditing ? (
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={handleCancelEdit}
-                  className="type-body rounded-full bg-[var(--surface-panel-track-disabled)] px-6 py-3 text-[var(--text-body-muted)] transition-all duration-150 ease-out hover:bg-[var(--surface-panel-track-neutral)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={handleUpdate}
-                  disabled={!response.trim()}
-                  className="type-body rounded-full bg-[var(--accent-teal)] px-8 py-3 text-white transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Update
-                </button>
-              </div>
-            ) : (
-              <motion.button
+              <button
                 type="button"
-                onClick={handleSave}
+                onClick={handleUpdate}
                 disabled={!response.trim()}
                 className="type-body rounded-full bg-[var(--accent-teal)] px-8 py-3 text-white transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
-                animate={
-                  !response.trim()
+              >
+                Update
+              </button>
+            </div>
+          ) : (
+            <motion.button
+              type="button"
+              onClick={handleSave}
+              disabled={!response.trim()}
+              className="type-body rounded-full bg-[var(--accent-teal)] px-8 py-3 text-white transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+              animate={
+                !response.trim()
                     ? { scale: 1 }
                     : prefersReducedMotion
                       ? { opacity: 1 }
                       : { scale: [1, 1.03, 1] }
                 }
-                transition={{ duration: 0.32, repeat: !response.trim() || prefersReducedMotion ? 0 : Infinity, repeatDelay: 2.2 }}
-                whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
-              >
+              transition={{ duration: 0.32, repeat: !response.trim() || prefersReducedMotion ? 0 : Infinity, repeatDelay: 2.2 }}
+              whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
+            >
                 Save
               </motion.button>
             )}

@@ -28,160 +28,133 @@ interface DecorativePlantProps {
 
 const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
   ({ plantData, onMouseNear, onPositionChange, isIntro }, ref) => {
-  const [isHovered, setIsHovered] = useState(false);
+  const [isHolding, setIsHolding] = useState(false);
   const [isDragging, setIsDragging] = useState(false);
-  const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
+  const [holdTimer, setHoldTimer] = useState<NodeJS.Timeout | null>(null);
+  const [currentPosition, setCurrentPosition] = useState(plantData.position);
   const plantRef = useRef<HTMLDivElement>(null);
+
+  // Update local position when plantData.position changes
+  useEffect(() => {
+    setCurrentPosition(plantData.position);
+  }, [plantData.position]);
+
+  const startHold = (clientX: number, clientY: number) => {
+    setIsHolding(true);
+    
+    const timer = setTimeout(() => {
+      setIsDragging(true);
+      setIsHolding(false);
+      const startX = clientX - currentPosition.x;
+      const startY = clientY - currentPosition.y;
+
+      const handleMouseMove = (e: MouseEvent) => {
+        const newX = e.clientX - startX;
+        const newY = e.clientY - startY;
+        setCurrentPosition({ x: newX, y: newY });
+        onPositionChange({ x: newX, y: newY });
+      };
+
+      const handleTouchMove = (e: TouchEvent) => {
+        e.preventDefault();
+        const touch = e.touches[0];
+        const newX = touch.clientX - startX;
+        const newY = touch.clientY - startY;
+        setCurrentPosition({ x: newX, y: newY });
+        onPositionChange({ x: newX, y: newY });
+      };
+
+      const handleEnd = () => {
+        setIsDragging(false);
+        document.removeEventListener('mousemove', handleMouseMove);
+        document.removeEventListener('mouseup', handleEnd);
+        document.removeEventListener('touchmove', handleTouchMove);
+        document.removeEventListener('touchend', handleEnd);
+      };
+
+      document.addEventListener('mousemove', handleMouseMove);
+      document.addEventListener('mouseup', handleEnd);
+      document.addEventListener('touchmove', handleTouchMove, { passive: false });
+      document.addEventListener('touchend', handleEnd);
+    }, 180); // 180ms hold delay
+
+    setHoldTimer(timer);
+  };
+
+  const cancelHold = () => {
+    if (holdTimer) {
+      clearTimeout(holdTimer);
+      setHoldTimer(null);
+    }
+    setIsHolding(false);
+  };
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
-    e.stopPropagation();
-    setIsDragging(true);
-    setDragStart({
-      x: e.clientX - plantData.position.x,
-      y: e.clientY - plantData.position.y
-    });
+    startHold(e.clientX, e.clientY);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
-    e.stopPropagation();
     const touch = e.touches[0];
-    setIsDragging(true);
-    setDragStart({
-      x: touch.clientX - plantData.position.x,
-      y: touch.clientY - plantData.position.y
-    });
+    startHold(touch.clientX, touch.clientY);
   };
 
-  const handleMouseMove = useCallback((e: MouseEvent) => {
-    if (!isDragging) return;
-    const newX = e.clientX - dragStart.x;
-    const newY = e.clientY - dragStart.y;
-    const maxX = window.innerWidth - 100;
-    const maxY = window.innerHeight - 100;
-    const constrainedX = Math.max(0, Math.min(newX, maxX));
-    const constrainedY = Math.max(0, Math.min(newY, maxY));
-    onPositionChange({ x: constrainedX, y: constrainedY });
-  }, [isDragging, dragStart, onPositionChange]);
-
-  const handleTouchMove = useCallback((e: TouchEvent) => {
-    if (!isDragging) return;
-    e.preventDefault(); // Only prevent default when actually dragging
-    const touch = e.touches[0];
-    const newX = touch.clientX - dragStart.x;
-    const newY = touch.clientY - dragStart.y;
-    const maxX = window.innerWidth - 100;
-    const maxY = window.innerHeight - 100;
-    const constrainedX = Math.max(0, Math.min(newX, maxX));
-    const constrainedY = Math.max(0, Math.min(newY, maxY));
-    onPositionChange({ x: constrainedX, y: constrainedY });
-  }, [isDragging, dragStart, onPositionChange]);
-
-  const handleMouseUp = useCallback(() => {
-    if (isDragging) {
-      setIsDragging(false);
-      onPositionChange({
-        x: Math.round(plantData.position.x / 20) * 20,
-        y: Math.round(plantData.position.y / 20) * 20
-      });
+  const handleMouseUp = () => {
+    if (!isDragging) {
+      cancelHold();
     }
-  }, [isDragging, plantData.position, onPositionChange]);
+  };
 
-  const handleTouchEnd = useCallback(() => {
-    if (isDragging) {
-      setIsDragging(false);
-      onPositionChange({
-        x: Math.round(plantData.position.x / 20) * 20,
-        y: Math.round(plantData.position.y / 20) * 20
-      });
+  const handleTouchEnd = () => {
+    if (!isDragging) {
+      cancelHold();
     }
-  }, [isDragging, plantData.position, onPositionChange]);
+  };
 
+  // Clean up timer on unmount
   useEffect(() => {
-    if (isDragging) {
-      // Use passive: false only for touchmove when we need to prevent default
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
-      document.addEventListener('touchmove', handleTouchMove, { passive: false });
-      document.addEventListener('touchend', handleTouchEnd);
-      return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
-        document.removeEventListener('touchmove', handleTouchMove);
-        document.removeEventListener('touchend', handleTouchEnd);
-      };
-    }
-  }, [isDragging, handleMouseMove, handleMouseUp, handleTouchMove, handleTouchEnd]);
-
-  // Proximity detection (mouse only - hover doesn't exist on mobile)
-  useEffect(() => {
-    const handleGlobalMouseMove = (e: MouseEvent) => {
-      if (isDragging) return;
-      
-      const rect = plantRef.current?.getBoundingClientRect();
-      if (!rect) return;
-
-      const plantCenterX = rect.left + rect.width / 2;
-      const plantCenterY = rect.top + rect.height / 2;
-      const distance = Math.sqrt(
-        Math.pow(e.clientX - plantCenterX, 2) + 
-        Math.pow(e.clientY - plantCenterY, 2)
-      );
-
-      const isNear = distance <= 50;
-      onMouseNear(isNear, distance);
+    return () => {
+      if (holdTimer) {
+        clearTimeout(holdTimer);
+      }
     };
-
-    document.addEventListener('mousemove', handleGlobalMouseMove);
-    return () => document.removeEventListener('mousemove', handleGlobalMouseMove);
-  }, [isDragging, onMouseNear]);
+  }, [holdTimer]);
 
   return (
-    <motion.div
+    <div
       ref={ref || plantRef}
-      initial={{ scale: 0, opacity: 0, rotate: -10 }}
-      animate={{ 
-        scale: isDragging ? 1.1 : 1, 
-        opacity: isDragging ? 0.8 : 1, 
-        rotate: 0
-      }}
-      transition={{ 
-        scale: { type: "spring", stiffness: 200, damping: 20 },
-        opacity: { duration: 0.2 },
-        rotate: { type: "spring", stiffness: 100 }
-      }}
-      whileHover={{ 
-        scale: 1.05, 
-        rotate: isHovered ? [0, 5, -5, 0] : 0,
-        transition: { 
-          scale: { duration: 0.2 },
-          rotate: { duration: 0.5, repeat: isHovered ? Infinity : 0 }
-        }
-      }}
-      onHoverStart={() => setIsHovered(true)}
-      onHoverEnd={() => setIsHovered(false)}
       onMouseDown={handleMouseDown}
+      onMouseUp={handleMouseUp}
       onTouchStart={handleTouchStart}
-      onClick={() => !isDragging && console.log(`Clicked on ${plantData.plant.name}`)}
-      className={`absolute z-50 ${isDragging ? 'cursor-grabbing' : 'cursor-grab'}`}
+      onTouchEnd={handleTouchEnd}
+      className="absolute cursor-move"
       style={{
-        // Use transform translate for GPU acceleration instead of top/left
-        transform: `translate(${plantData.position.x}px, ${plantData.position.y}px)`,
-        // Add will-change only during drag for optimal performance
-        willChange: isDragging ? 'transform' : 'auto',
+        left: `${currentPosition.x}px`,
+        top: `${currentPosition.y}px`,
         width: '80px',
         height: '80px',
-        filter: isDragging ? 'drop-shadow(0 10px 20px rgba(0,0,0,0.2))' : 'none'
+        zIndex: 9999,
+        transition: isDragging ? 'none' : 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+        transform: isDragging ? 'scale(1.15) rotate(3deg)' : isHolding ? 'scale(1.05) rotate(1deg)' : 'scale(1) rotate(0deg)',
+        filter: isDragging ? 'drop-shadow(0 25px 50px rgba(0,0,0,0.4))' : isHolding ? 'drop-shadow(0 10px 20px rgba(0,0,0,0.2))' : 'none',
+        animation: isHolding && !isDragging ? 'gentle-sway 2s ease-in-out infinite' : 'none',
       }}
     >
       <img 
         src={plantData.plant.image} 
         alt={plantData.plant.name}
-        className="w-full h-full object-contain pixelated select-none pointer-events-none"
+        className="w-full h-full object-contain pixelated select-none"
         style={{ imageRendering: 'pixelated' }}
       />
-    </motion.div>
+      <style>{`
+        @keyframes gentle-sway {
+          0%, 100% { transform: scale(1.05) translateY(0px) rotate(1deg); }
+          25% { transform: scale(1.05) translateY(-4px) rotate(0deg); }
+          75% { transform: scale(1.05) translateY(-4px) rotate(2deg); }
+        }
+      `}</style>
+    </div>
   );
 });
 
@@ -191,17 +164,38 @@ interface FocusTaskScreenProps {
   targetTime?: number; // in minutes
 }
 
-export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: FocusTaskScreenProps) {
+export default function FocusTaskScreen({ todo, onClose, targetTime }: FocusTaskScreenProps) {
+  // Get targetTime from window storage if not provided in props
+  const storedTargetTime = (window as any).focusTaskTargetTime;
+  const actualTargetTime = targetTime || storedTargetTime || 25;
+  
+  console.log('FocusTaskScreen - targetTime from props:', targetTime);
+  console.log('FocusTaskScreen - targetTime from window:', storedTargetTime);
+  console.log('FocusTaskScreen - actualTargetTime:', actualTargetTime);
+  
+  // Clear the stored targetTime
+  if (storedTargetTime) {
+    delete (window as any).focusTaskTargetTime;
+  }
+  
   const prefersReducedMotion = useReducedMotion();
   const [isRunning, setIsRunning] = useState(false);
   const [isBreak, setIsBreak] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(targetTime * 60);
+  const [timeLeft, setTimeLeft] = useState(actualTargetTime * 60);
   const [selectedMusic, setSelectedMusic] = useState('ambiance');
   const [showMusicDropdown, setShowMusicDropdown] = useState(false);
   const [showBreakConfirm, setShowBreakConfirm] = useState(false);
   const [showBreakComplete, setShowBreakComplete] = useState(false);
   const [ownedPlants, setOwnedPlants] = useState<string[]>([]);
+  const [selectedPlant, setSelectedPlant] = useState<string>('quiet-fern');
   const [breakTime] = useState(5 * 60); // 5 minutes in seconds
+  
+  // Update timeLeft when targetTime changes, but only if not currently running
+  useEffect(() => {
+    if (!isRunning && !isBreak) {
+      setTimeLeft(actualTargetTime * 60);
+    }
+  }, [actualTargetTime, isRunning, isBreak]);
   
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoStartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -212,10 +206,17 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
     try {
       const savedOwnedPlants = localStorage.getItem('lifelevel-owned-plants');
       if (savedOwnedPlants) {
-        setOwnedPlants(JSON.parse(savedOwnedPlants));
+        const parsed = JSON.parse(savedOwnedPlants);
+        setOwnedPlants(parsed);
+      }
+      
+      // Also load the currently selected plant
+      const selectedPlant = localStorage.getItem('lifelevel-selected-plant');
+      if (selectedPlant) {
+        setSelectedPlant(selectedPlant);
       }
     } catch (error) {
-      console.warn('Could not load owned plants:', error);
+      console.warn('Could not load plant data:', error);
     }
   }, []);
   
@@ -226,88 +227,74 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
 
   // Generate positions for plants to match reference image layout
   useEffect(() => {
-    // Only use plants the user actually owns
-    const userOwnedPlants = ownedPlants.map(plantId => {
-      const plant = getPlantById(plantId);
-      if (!plant) return null;
-      return {
-        id: plant.id,
-        name: plant.displayName,
-        image: plant.image,
-        unlocked: true,
-        level: plant.unlockLevel || 1,
-      };
-    }).filter(Boolean) as Plant[];
+    // Use the currently selected plant if user owns it, otherwise fallback to owned plants
+    let plantToShow: Plant | null = null;
     
-    // Limit to maximum 3 plants - if user has more, randomly select 3
-    let plantsToShow = userOwnedPlants;
-    if (plantsToShow.length > 3) {
-      // Randomly select 3 plants from user's collection
-      const shuffled = [...plantsToShow].sort(() => 0.5 - Math.random());
-      plantsToShow = shuffled.slice(0, 3);
+    // First try to use the selected plant if user owns it
+    if (selectedPlant && ownedPlants.includes(selectedPlant)) {
+      const plant = getPlantById(selectedPlant);
+      if (plant) {
+        plantToShow = {
+          id: plant.id,
+          name: plant.displayName,
+          image: plant.image,
+          unlocked: true,
+          level: plant.unlockLevel || 1,
+        };
+      }
     }
     
-    // If user has no plants, don't show any
-    if (plantsToShow.length === 0) {
-      setPlantPositions([]);
-      return;
+    // If selected plant not available, fallback to first owned plant
+    if (!plantToShow && ownedPlants.length > 0) {
+      const plant = getPlantById(ownedPlants[0]);
+      if (plant) {
+        plantToShow = {
+          id: plant.id,
+          name: plant.displayName,
+          image: plant.image,
+          unlocked: true,
+          level: plant.unlockLevel || 1,
+        };
+      }
+    }
+    
+    // If no plants available, use a default plant
+    if (!plantToShow) {
+      // Use a default plant as fallback
+      const defaultPlant = getPlantById('quiet-fern');
+      if (defaultPlant) {
+        plantToShow = {
+          id: defaultPlant.id,
+          name: defaultPlant.displayName,
+          image: defaultPlant.image,
+          unlocked: true,
+          level: 1,
+        };
+      }
     }
     
     const w = window.innerWidth;
     const h = window.innerHeight;
-    const plantSize = 80;
-    const margin = 30; // margin from edges
     
-    // Calculate center positions
-    const centerX = w / 2;
-    const centerY = h / 2;
+    // Position plant 124px above and slightly to the right of "Focusing on:" text
+    // The "Focusing on:" text is typically in the upper-middle area of the screen
+    const defaultX = window.innerWidth / 2 + 60; // Center + 60px to the right
+    const defaultY = window.innerHeight / 2 - 292; // Center - 292px (approximately 124px above the text)
     
-    // Define positions to match reference image - plants around the timer
-    const positions: PlantPosition[] = plantsToShow.map((plant, index) => {
-      // Position plants in the 4 quadrants around the timer
-      switch (index % 4) {
-        case 0: // Top left area
-          return { 
-            plant, 
-            position: { 
-              x: margin, 
-              y: 180 // Below header
-            } 
-          };
-        case 1: // Top right area
-          return { 
-            plant, 
-            position: { 
-              x: w - plantSize - margin, 
-              y: 180 // Below header
-            } 
-          };
-        case 2: // Bottom left - near play button
-          return { 
-            plant, 
-            position: { 
-              x: margin, 
-              y: centerY + 80 // Below timer, near controls
-            } 
-          };
-        case 3: // Bottom right - near coffee button
-          return { 
-            plant, 
-            position: { 
-              x: w - plantSize - margin, 
-              y: centerY + 80 // Below timer, near controls
-            } 
-          };
-        default:
-          return { plant, position: { x: margin, y: 180 } };
+    console.log('Positioning plant near "Focusing on:" text:', { x: defaultX, y: defaultY, plant: plantToShow?.name });
+    
+    const positions: PlantPosition[] = [{
+      plant: plantToShow,
+      position: { 
+        x: defaultX,
+        y: defaultY
       }
-    });
-    
+    }];
     setPlantPositions(positions);
     
     // End intro phase after initial animations
     setTimeout(() => setIsIntro(false), 2000);
-  }, [ownedPlants]); // Re-run when owned plants change
+  }, [ownedPlants, selectedPlant]);
 
   const handlePlantPositionChange = (plantId: string, newPosition: { x: number, y: number }) => {
     setPlantPositions(prev => prev.map(p => 
@@ -652,8 +639,8 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
         />
       </div>
 
-      {/* Decorative Plants */}
-      {plantPositions.map((plantData) => {
+      {/* Decorative Plants - Only show after session starts */}
+      {isRunning && plantPositions.map((plantData) => {
         return (
           <DecorativePlant
             key={plantData.plant.id}
@@ -790,7 +777,7 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
               stroke="currentColor"
               strokeWidth="4"
               fill="none"
-              className="text-gray-200"
+              className="text-purple-400 opacity-30"
             />
             <motion.circle
               cx="96"
@@ -800,8 +787,8 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
               strokeWidth="4"
               fill="none"
               strokeDasharray={`${2 * Math.PI * 88}`}
-              strokeDashoffset={`${2 * Math.PI * 88 * (1 - (isBreak ? (breakTime - timeLeft) / breakTime : (targetTime * 60 - timeLeft) / (targetTime * 60)))}`}
-              className={isBreak ? 'text-purple-400' : 'text-blue-500'}
+              strokeDashoffset={`${2 * Math.PI * 88 * (1 - (isBreak ? (breakTime - timeLeft) / breakTime : ((actualTargetTime || 25) * 60 - timeLeft) / ((actualTargetTime || 25) * 60)))}`}
+              className="text-purple-300"
               style={{ transition: 'stroke-dashoffset 0.5s ease' }}
             />
           </svg>

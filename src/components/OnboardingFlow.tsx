@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
 import svgPaths from '../imports/Frame47296-1/svg-0hdeo07ddu';
 import { Check, ChevronLeft, Target, Lightbulb } from 'lucide-react';
@@ -20,6 +20,28 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [focusMode, setFocusMode] = useState(true);
   const [selectedPlant, setSelectedPlant] = useState('quiet-fern');
   const [isLoading, setIsLoading] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+
+  // Handle mobile keyboard with Visual Viewport API
+  useEffect(() => {
+    if (!window.visualViewport) return;
+
+    const handleViewportChange = () => {
+      const viewport = window.visualViewport;
+      const heightDiff = window.innerHeight - viewport.height;
+      setKeyboardHeight(heightDiff > 150 ? heightDiff : 0); // Only count as keyboard if significant height
+    };
+
+    // Initial check
+    handleViewportChange();
+
+    // Listen for viewport changes (keyboard open/close)
+    window.visualViewport.addEventListener('resize', handleViewportChange);
+    
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleViewportChange);
+    };
+  }, []);
 
   // Get starter plants from registry
   const plants = getStarterPlants().map(plant => ({
@@ -37,6 +59,9 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       console.log('Ignoring click - already loading');
       return;
     }
+    
+    // Reset scroll position before navigating away
+    window.scrollTo(0, 0);
     
     // All steps should be instant for better UX
     if (currentStep === 3) {
@@ -71,14 +96,16 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
     }
   };
 
-  const handleSkip = () => {
-    onComplete();
-  };
-
   const handleBack = () => {
+    // Reset scroll position before navigating away
+    window.scrollTo(0, 0);
     if (currentStep > 0) {
       setCurrentStep(currentStep - 1);
     }
+  };
+
+  const handleSkip = () => {
+    onComplete();
   };
 
   const canContinue =
@@ -90,11 +117,12 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   return (
     <div
-      className={`absolute inset-0 z-[100] flex min-h-screen flex-col bg-[var(--bg-screen-auth)] overflow-y-auto overscroll-y-contain`}
+      className={`absolute inset-0 z-[100] flex bg-[var(--bg-screen-auth)] overflow-hidden`}
       style={{ 
         height: '100dvh',
+        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : 'max(env(safe-area-inset-bottom), 0px)',
         paddingTop: 'max(env(safe-area-inset-top), 12px)',
-        paddingBottom: 'max(env(safe-area-inset-bottom), 0px)'
+        transition: 'padding-bottom 0.25s ease-out'
       }}
     >
       <CanopyScreenBackground
@@ -110,7 +138,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       />
 
       {/* Content: max 393px (frame width), centered on large viewports */}
-      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[min(393px,100%)] flex-1 flex-col px-[var(--space-6)] sm:px-[var(--space-10)]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), var(--space-8))' }}>
+      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[min(393px,100%)] flex-1 flex-col px-[var(--space-6)] sm:px-[var(--space-10)]">
+        {/* Header - pinned to top */}
         <div className="flex h-11 shrink-0 items-center justify-between">
           {currentStep > 0 ? (
             <button
@@ -127,12 +156,15 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           <span className="h-9 w-9" aria-hidden="true" />
         </div>
 
-        <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-y-contain">
+        {/* Middle content - flexible space that absorbs keyboard */}
+        <div className="flex min-h-0 flex-1 flex-col">
           {/* Step 0: reference places hero ~22–28% below top (upper-mid); other steps: centered in remaining space */}
           <div
             className={
               currentStep === 0
-                ? 'flex w-full min-h-0 flex-col pb-[var(--space-5)] pt-[clamp(var(--space-3),min(14dvh,4rem),5rem)]'
+                ? keyboardHeight > 0 
+                  ? 'flex w-full min-h-0 flex-col justify-center py-[var(--space-4)]'
+                  : 'flex w-full min-h-0 flex-col pb-[var(--space-5)] pt-[clamp(var(--space-3),min(14dvh,4rem),5rem)]'
                 : currentStep === 3
                   ? 'my-auto flex w-full min-h-0 flex-col py-[var(--space-2)]'
                   : currentStep === 2
@@ -158,15 +190,12 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                       <path d={svgPaths.p2ff87f00} fill="var(--text-strong)" />
                     </svg>
                   </div>
-                  <h1 className="type-display tracking-tight text-[var(--text-strong)]">
-                    Can<span className="italic">opy</span>
-                  </h1>
                 </div>
 
                 <h2 className="type-headline mb-[var(--space-3)] max-w-[20ch] italic text-[var(--text-strong)]">
                   What should we call you?
                 </h2>
-                <p className="type-body mb-[var(--space-8)] italic text-[var(--text-caption-3)]">
+                <p className="type-body mb-[var(--space-6)] italic text-[var(--text-caption-3)]">
                   Just two quick things, then you&apos;re in.
                 </p>
 
@@ -182,22 +211,9 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                   value={userName}
                   onChange={(e) => setUserName(e.target.value)}
                   placeholder="Name"
-                  className="type-body mb-[var(--space-6)] w-full rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] p-3 text-[var(--text-strong-alt)] outline-none transition-all duration-150 ease-out placeholder:text-[var(--text-placeholder)] focus:border-[var(--accent-teal)] focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-accent-25)]"
+                  className="type-body w-full rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] p-3 text-[var(--text-strong-alt)] outline-none transition-all duration-150 ease-out placeholder:text-[var(--text-placeholder)] focus:border-[var(--accent-teal)] focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-accent-25)]"
                   autoFocus
                 />
-
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={!canContinue}
-                  className={`type-body h-14 w-full rounded-[var(--radius-full)] text-center text-white shadow-none transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:bg-[var(--surface-panel-track-neutral)] disabled:text-white/80 disabled:hover:bg-[var(--surface-panel-track-neutral)] ${
-                    canContinue
-                      ? 'bg-[var(--accent-teal)] hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)]'
-                      : 'bg-[var(--surface-panel-track-disabled)]'
-                  } ${prefersReducedMotion ? '' : 'active:scale-[0.98] disabled:active:scale-100'}`}
-                >
-                  Continue
-                </button>
               </div>
             )}
 
@@ -232,19 +248,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     </button>
                   ))}
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  disabled={!canContinue}
-                  className={`type-body h-14 w-full rounded-[var(--radius-full)] text-center text-white shadow-none transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:bg-[var(--surface-panel-track-neutral)] disabled:text-white/80 disabled:hover:bg-[var(--surface-panel-track-neutral)] ${
-                    canContinue
-                      ? 'bg-[var(--accent-teal)] hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)]'
-                      : 'bg-[var(--surface-panel-track-disabled)]'
-                  } ${prefersReducedMotion ? '' : 'active:scale-[0.98]'}`}
-                >
-                  Continue
-                </button>
               </div>
             )}
 
@@ -313,14 +316,6 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     <p className="type-caption text-[var(--accent-teal)]">Recommended based on your answer ↑</p>
                   </div>
                 </div>
-
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="type-body h-14 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-center text-white shadow-none transition-colors duration-200 hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98]"
-                >
-                  Continue
-                </button>
               </div>
             )}
 
@@ -374,18 +369,68 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                     );
                   })}
                 </div>
-                <button
-                  type="button"
-                  onClick={handleNext}
-                  className="type-body h-14 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-center text-white shadow-none transition-colors duration-200 hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98]"
-                >
-                  Start growing
-                </button>
               </div>
             )}
               </motion.div>
             </AnimatePresence>
           </div>
+        </div>
+
+        {/* CTA Button - Fixed to bottom */}
+        <div className="shrink-0 px-[var(--space-6)] sm:px-[var(--space-10)]" style={{ paddingBottom: '32px' }}>
+          {/* Step 1: Name */}
+          {currentStep === 0 && (
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={!canContinue}
+              className={`type-body h-14 w-full rounded-[var(--radius-full)] text-center text-white shadow-none transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:bg-[var(--surface-panel-track-neutral)] disabled:text-white/80 disabled:hover:bg-[var(--surface-panel-track-neutral)] ${
+                canContinue
+                  ? 'bg-[var(--accent-teal)] hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)]'
+                  : 'bg-[var(--surface-panel-track-disabled)]'
+              } ${prefersReducedMotion ? '' : 'active:scale-[0.98] disabled:active:scale-100'}`}
+            >
+              Continue
+            </button>
+          )}
+
+          {/* Step 2: Mood */}
+          {currentStep === 1 && (
+            <button
+              type="button"
+              onClick={handleNext}
+              disabled={!canContinue}
+              className={`type-body h-14 w-full rounded-[var(--radius-full)] text-center text-white shadow-none transition-colors duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white disabled:cursor-not-allowed disabled:bg-[var(--surface-panel-track-neutral)] disabled:text-white/80 disabled:hover:bg-[var(--surface-panel-track-neutral)] ${
+                canContinue
+                  ? 'bg-[var(--accent-teal)] hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)]'
+                  : 'bg-[var(--surface-panel-track-disabled)]'
+              } ${prefersReducedMotion ? '' : 'active:scale-[0.98]'}`}
+            >
+              Continue
+            </button>
+          )}
+
+          {/* Step 3: Focus mode */}
+          {currentStep === 2 && (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="type-body h-14 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-center text-white shadow-none transition-colors duration-200 hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98]"
+            >
+              Continue
+            </button>
+          )}
+
+          {/* Step 4: Plant Selection */}
+          {currentStep === 3 && (
+            <button
+              type="button"
+              onClick={handleNext}
+              className="type-body h-14 w-full rounded-[var(--radius-full)] bg-[var(--accent-teal)] text-center text-white shadow-none transition-colors duration-200 hover:bg-[var(--accent-teal-hover)] active:bg-[var(--accent-teal-active)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98]"
+            >
+              Start growing
+            </button>
+          )}
         </div>
 
         <div

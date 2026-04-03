@@ -18,7 +18,7 @@ export default function FocusTaskModal({ isOpen, onClose, onConfirm, todo }: Foc
   if (!isOpen || !todo) return null;
 
   const handleConfirm = () => {
-    onConfirm(showTimeInput ? targetTime : undefined);
+    onConfirm(targetTime);
     onClose();
   };
 
@@ -92,10 +92,20 @@ export default function FocusTaskModal({ isOpen, onClose, onConfirm, todo }: Foc
                 <span className="text-sm text-[var(--text-body-muted)]">minutes</span>
               </div>
             ) : (
-              <div className="flex flex-wrap gap-[var(--space-2)]">
+              <div className="flex flex-wrap gap-1">
+                <button
+                  onClick={() => setTargetTime(5)}
+                  className={`px-3 py-1.5 rounded-[var(--radius-full)] border text-sm font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] ${
+                    targetTime === 5
+                      ? 'border-[var(--accent-teal)] bg-[var(--accent-teal)] text-white'
+                      : 'border-[var(--border-soft)] bg-[var(--surface-base)] text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)]'
+                  }`}
+                >
+                  5 min
+                </button>
                 <button
                   onClick={() => setTargetTime(15)}
-                  className={`px-[var(--space-4)] py-[var(--space-2)] rounded-[var(--radius-full)] border text-sm font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] ${
+                  className={`px-3 py-1.5 rounded-[var(--radius-full)] border text-sm font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] ${
                     targetTime === 15
                       ? 'border-[var(--accent-teal)] bg-[var(--accent-teal)] text-white'
                       : 'border-[var(--border-soft)] bg-[var(--surface-base)] text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)]'
@@ -105,7 +115,7 @@ export default function FocusTaskModal({ isOpen, onClose, onConfirm, todo }: Foc
                 </button>
                 <button
                   onClick={() => setTargetTime(25)}
-                  className={`px-[var(--space-4)] py-[var(--space-2)] rounded-[var(--radius-full)] border text-sm font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] ${
+                  className={`px-3 py-1.5 rounded-[var(--radius-full)] border text-sm font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] ${
                     targetTime === 25
                       ? 'border-[var(--accent-teal)] bg-[var(--accent-teal)] text-white'
                       : 'border-[var(--border-soft)] bg-[var(--surface-base)] text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)]'
@@ -115,7 +125,7 @@ export default function FocusTaskModal({ isOpen, onClose, onConfirm, todo }: Foc
                 </button>
                 <button
                   onClick={() => setTargetTime(45)}
-                  className={`px-[var(--space-4)] py-[var(--space-2)] rounded-[var(--radius-full)] border text-sm font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] ${
+                  className={`px-3 py-1.5 rounded-[var(--radius-full)] border text-sm font-medium transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] ${
                     targetTime === 45
                       ? 'border-[var(--accent-teal)] bg-[var(--accent-teal)] text-white'
                       : 'border-[var(--border-soft)] bg-[var(--surface-base)] text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)]'

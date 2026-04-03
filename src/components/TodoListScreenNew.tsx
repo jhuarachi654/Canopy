@@ -63,6 +63,7 @@ export default function TodoListScreen({
   const [showFocusTaskModal, setShowFocusTaskModal] = useState(false);
   const [focusTaskTodo, setFocusTaskTodo] = useState<Todo | null>(null);
   const [showFocusTaskScreen, setShowFocusTaskScreen] = useState(false);
+  const [pendingTargetTime, setPendingTargetTime] = useState<number>(25);
   const [longPressTimer, setLongPressTimer] = useState<NodeJS.Timeout | null>(null);
   const [longPressTask, setLongPressTask] = useState<Todo | null>(null);
 
@@ -133,6 +134,7 @@ export default function TodoListScreen({
   }, [pendingDraft, visibleTodos, dueDateByTask, notesByTask]);
 
   const openCreateSheet = () => {
+    window.scrollTo(0, 0);
     setEditingTodoId(null);
     setNewTodoText('');
     setNewTodoNotes('');
@@ -142,6 +144,7 @@ export default function TodoListScreen({
   };
 
   const openEditSheet = (todo: Todo) => {
+    window.scrollTo(0, 0);
     setEditingTodoId(todo.id);
     setNewTodoText(todo.text);
     setNewTodoNotes(notesByTask[todo.id] ?? '');
@@ -215,7 +218,13 @@ export default function TodoListScreen({
   };
 
   const handleFocusTaskConfirm = (targetTime?: number) => {
+    console.log('handleFocusTaskConfirm - received targetTime:', targetTime);
     setShowFocusTaskModal(false);
+    
+    if (targetTime) {
+      console.log('Setting pendingTargetTime to:', targetTime);
+      setPendingTargetTime(targetTime);
+    }
     setShowFocusTaskScreen(true);
   };
 
@@ -364,8 +373,9 @@ export default function TodoListScreen({
   const overlayRoot = typeof document !== 'undefined' ? document.body : null;
 
   return (
-    <div className={`relative flex h-full flex-col ${showCreateSheet ? 'z-[80]' : 'z-0'}`}>
-      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-[var(--space-4)] pb-24 pt-4 relative z-10">
+    <div className={`relative flex h-full flex-col ${showCreateSheet ? 'z-[80]' : 'z-0'}`} style={{ minHeight: '100dvh' }}>
+      {/* Header - pinned to top */}
+      <div className="shrink-0 px-[var(--space-4)] pt-4 pb-2">
         <h2 className="mb-3 text-xs uppercase tracking-widest text-gray-400">Hi {userName || 'there'}</h2>
         <div className="mb-6 flex items-center justify-between">
           <div>
@@ -388,8 +398,12 @@ export default function TodoListScreen({
             </span>
           </button>
         </div>
+      </div>
 
-        <div className="mb-6 flex gap-[var(--space-1)] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-85)] p-[var(--space-2)]">
+      {/* Middle content - flexible space that absorbs keyboard */}
+      <div className="flex-1 overflow-hidden">
+        <div className="custom-scrollbar h-full overflow-y-auto overscroll-y-contain px-[var(--space-4)] pb-6 relative z-10">
+          <div className="mb-6 flex gap-[var(--space-1)] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-85)] p-[var(--space-2)]">
           {[
             { id: 'todo' as const, label: 'To Do' },
             { id: 'completed' as const, label: 'Completed' },
@@ -579,6 +593,7 @@ export default function TodoListScreen({
             ) : null}
           </div>
         )}
+        </div>
       </div>
 
       {activeFilter === 'todo' && (
@@ -629,7 +644,10 @@ export default function TodoListScreen({
                     exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 8 }}
                     transition={{ duration: 0.22 }}
                   >
-                    <p className="mb-2 text-sm text-[var(--text-body-muted-2)]">Choose up to 3 focus tasks</p>
+                    <p className="mb-3 text-sm text-[var(--text-body-muted-2)]">Choose up to 3 focus tasks</p>
+                    <p className="mb-4 text-xs text-[var(--text-caption-2)] leading-relaxed">
+                      Focusing on only three tasks at a time helps combat cognitive overload, reduce mental fatigue, and manage executive dysfunction.
+                    </p>
                     <div className="max-h-[45dvh] space-y-2 overflow-y-auto pr-1">
                       {rankedIncompleteTodos.map((todo) => {
                         const isSelected = focusSelectedSet.has(todo.id);
@@ -757,10 +775,14 @@ export default function TodoListScreen({
 
       {/* Focus Task Screen */}
       {showFocusTaskScreen && focusTaskTodo && (
-        <FocusTaskScreen
-          todo={focusTaskTodo}
-          onClose={handleFocusTaskClose}
-        />
+        <>
+          {console.log('Rendering FocusTaskScreen with pendingTargetTime:', pendingTargetTime)}
+          <FocusTaskScreen
+            todo={focusTaskTodo}
+            onClose={handleFocusTaskClose}
+            targetTime={pendingTargetTime}
+          />
+        </>
       )}
     </div>
   );

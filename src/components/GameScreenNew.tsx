@@ -73,17 +73,17 @@ export default function GameScreen({
   const currentPlant = plants[selectedPlant as keyof typeof plants] || plants['quiet-fern'];
 
   useEffect(() => {
-    let timeoutId: ReturnType<typeof window.setTimeout>;
+    let timeoutId: NodeJS.Timeout;
     const onCelebrate = () => {
       setFocusPlantCelebrating(true);
-      window.clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
       const ms = prefersReducedMotion ? 400 : 720;
-      timeoutId = window.setTimeout(() => setFocusPlantCelebrating(false), ms);
+      timeoutId = setTimeout(() => setFocusPlantCelebrating(false), ms);
     };
     window.addEventListener('canopy-focus-session-celebrate', onCelebrate);
     return () => {
       window.removeEventListener('canopy-focus-session-celebrate', onCelebrate);
-      window.clearTimeout(timeoutId);
+      clearTimeout(timeoutId);
     };
   }, [prefersReducedMotion]);
 
@@ -122,7 +122,7 @@ export default function GameScreen({
 
   // Get current level info
   const currentLevelInfo = levelConfig.find(l => l.level === playerProgress.level);
-  const plantName = currentLevelInfo?.title || "Getting Started";
+  const plantName = currentPlant.displayName;
   
   const xpForNextLevel = getXPForNextLevel(playerProgress.level);
   const progressPercentage = (playerProgress.currentXP / xpForNextLevel) * 100;
@@ -228,9 +228,10 @@ export default function GameScreen({
   const yearGardenDays = generateYearGarden();
 
   return (
-    <div className="flex h-full flex-col min-h-0">
+    <div className="flex h-full flex-col" style={{ height: '100dvh', minHeight: '100dvh' }}>
       <div 
         className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-[calc(8rem+env(safe-area-inset-bottom))] pt-[max(1.5rem,env(safe-area-inset-top))]"
+        style={{ minHeight: 0 }}
       >
         <h2 className="mb-3 text-xs uppercase tracking-widest text-gray-400">Your Garden</h2>
         <h2 className="mb-0 font-serif text-[2.6rem] leading-tight text-[var(--text-strong-alt)]">Garden</h2>
@@ -612,7 +613,7 @@ export default function GameScreen({
               
               // Within each group, maintain original order
               return 0;
-            }).map(([key, plant], index) => {
+            }).slice(0, 6).map(([key, plant], index) => {
               // Calculate current level from total XP using points system
               const currentLevel = getLevelFromPoints(playerProgress.totalXP);
               // Check if user owns this plant
@@ -630,7 +631,7 @@ export default function GameScreen({
               if (isOwned && isStarterPlant) {
                 unlockText = 'Your first plant';
               } else if (!isUnlocked && plant.unlockLevel) {
-                unlockText = `Unlocks at level ${plant.unlockLevel}`;
+                unlockText = `Unlocks at lvl ${plant.unlockLevel}`;
               }
               
               return (
@@ -652,7 +653,7 @@ export default function GameScreen({
                 }}
                 className={`relative aspect-square rounded-[var(--radius-md)] border border-[var(--border-soft-panel-3)] bg-[var(--surface-base)] p-[var(--space-3)] shadow-[var(--shadow-card-soft)] transition-all duration-150 ease-out ${
                   isSelected
-                    ? 'border-[var(--accent-teal)] bg-[var(--surface-card-subtle-2)]'
+                    ? 'border-[var(--accent-teal)]'
                     : ''
                 } ${
                   isUnlocked
@@ -674,17 +675,18 @@ export default function GameScreen({
                       style={{
                         imageRendering: 'pixelated',
                         opacity: isUnlocked ? 1 : 0.4,
+                        transform: 'scale(1.2)',
                       }}
                     />
                   </div>
                   
                   {/* Plant name */}
-                  <h5 className="text-xs font-medium text-[var(--text-strong-alt)] text-center leading-tight whitespace-nowrap overflow-hidden text-ellipsis w-full">
+                  <h5 className="text-xs font-medium text-[var(--text-strong-alt)] text-center leading-tight">
                     {plant.displayName}
                   </h5>
                   
                   {/* Status text */}
-                  <p className="text-xs text-[var(--text-caption-2)] text-center leading-tight">
+                  <p className="text-[10px] text-[var(--text-caption-2)] text-center leading-tight">
                     {unlockText}
                   </p>
                 </div>
@@ -692,6 +694,29 @@ export default function GameScreen({
               );
             })}
           </div>
+          
+          {/* See More button - full width with proper spacing */}
+          {Object.entries(plants).length > 6 && (
+            <div className="mt-[var(--space-3)]">
+              <motion.button
+                initial={{ scale: 0, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ 
+                  delay: 1.1,
+                  type: "spring",
+                  stiffness: 200,
+                  damping: 15
+                }}
+                className="type-body h-14 w-full rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] text-[var(--text-strong-alt)] shadow-none transition-all duration-150 ease-out hover:bg-[var(--surface-hover-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98] cursor-pointer"
+                whileHover={{ 
+                  scale: 1.02,
+                }}
+                whileTap={{ scale: 0.98 }}
+              >
+                More Plants (+{Object.entries(plants).length - 6})
+              </motion.button>
+            </div>
+          )}
         </motion.div>
 
         {/* Garden Reflection Input */}

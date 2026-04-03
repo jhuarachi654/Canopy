@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Calendar, List } from 'lucide-react';
 import type { Todo, JournalEntry } from '../App';
 
 interface TaskHistoryScreenProps {
@@ -17,6 +17,112 @@ export default function TaskHistoryScreen({
   const [calendarMonth, setCalendarMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [hoveredDate, setHoveredDate] = useState<Date | null>(null);
+  const [viewMode, setViewMode] = useState<'calendar' | 'list'>('calendar');
+  
+  // Compact calendar state
+  const [visibleDates, setVisibleDates] = useState<Date[]>([]);
+  const [expandedJournal, setExpandedJournal] = useState<Set<string>>(new Set());
+
+  // Initialize visible dates and reset to today
+  React.useEffect(() => {
+    initializeVisibleDates();
+    // Always reset to today when component mounts
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    setSelectedDate(today);
+  }, []);
+
+  const initializeVisibleDates = () => {
+    const dates = [];
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    // Start from today and go forward 14 days
+    for (let i = 0; i < 14; i++) {
+      const date = new Date(today);
+      date.setDate(today.getDate() + i);
+      dates.push(new Date(date));
+    }
+    setVisibleDates(dates);
+  };
+
+  // Helper functions for compact calendar
+  const getEntriesForDate = (date: Date) => {
+    const dateString = getLocalDateString(date);
+    const dayTasks = todos.filter(todo => {
+      if (!todo.completedAt && !todo.createdAt) return false;
+      const taskDate = todo.completedAt 
+        ? new Date(todo.completedAt).toISOString().split('T')[0]
+        : new Date(todo.createdAt).toISOString().split('T')[0];
+      return taskDate === dateString;
+    });
+    
+    const dayJournal = journalEntries?.filter(entry => {
+      const entryDate = new Date(entry.createdAt).toISOString().split('T')[0];
+      return entryDate === dateString;
+    }) || [];
+
+    return { tasks: dayTasks, journal: dayJournal };
+  };
+
+  const formatDateForSelector = (date: Date) => {
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    if (getLocalDateString(date) === getLocalDateString(today)) {
+      return 'Today';
+    } else if (getLocalDateString(date) === getLocalDateString(yesterday)) {
+      return 'Yesterday';
+    } else if (getLocalDateString(date) === getLocalDateString(tomorrow)) {
+      return 'Tomorrow';
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    }
+  };
+
+  const formatDateHeader = (date: Date) => {
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    if (getLocalDateString(date) === getLocalDateString(today)) {
+      return 'Today';
+    } else if (getLocalDateString(date) === getLocalDateString(yesterday)) {
+      return 'Yesterday';
+    } else {
+      return date.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        month: 'long', 
+        day: 'numeric',
+        year: date.getFullYear() !== today.getFullYear() ? 'numeric' : undefined
+      });
+    }
+  };
+
+  const toggleJournalExpansion = (entryId: string) => {
+    setExpandedJournal(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(entryId)) {
+        newSet.delete(entryId);
+      } else {
+        newSet.add(entryId);
+      }
+      return newSet;
+    });
+  };
+
+  const truncateText = (text: string, maxLines: number = 3) => {
+    const lines = text.split('\n');
+    if (lines.length <= maxLines) return text;
+    return lines.slice(0, maxLines).join('\n') + '...';
+  };
 
   const QUOTES = [
     { text: 'Start where you are. Use what you have. Do what you can.', source: 'Arthur Ashe' },
@@ -51,6 +157,18 @@ export default function TaskHistoryScreen({
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  };
+
+  // List view helper functions
+  const getLastSevenDays = () => {
+    const today = new Date();
+    const days = [];
+    for (let i = 6; i >= 0; i--) {
+      const date = new Date(today);
+      date.setDate(today.getDate() - i);
+      days.push(date);
+    }
+    return days;
   };
 
   const getJournalEntriesForMonth = () => {
@@ -147,14 +265,6 @@ export default function TaskHistoryScreen({
     };
   };
 
-  const formatDateHeader = (date: Date) => {
-    return date.toLocaleDateString('en-US', { 
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric' 
-    });
-  };
-
   const selectedEntries = getSelectedDateEntries();
   const hoveredEntries = getHoveredDateEntries();
   const journalMap = getJournalEntriesForMonth();
@@ -162,15 +272,15 @@ export default function TaskHistoryScreen({
   const selectedHasContent = selectedEntries.journal.length > 0 || selectedEntries.tasks.length > 0;
 
   return (
-    <div className="flex flex-col min-h-screen pb-20">
-      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-24 pt-6">
-        <h2 className="mb-3 text-xs uppercase tracking-widest text-gray-400">YOUR LOG</h2>
+    <div className="flex flex-col" style={{ height: '100dvh', minHeight: '100dvh' }}>
+      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-24 pt-6" style={{ minHeight: 0 }}>
+        <h2 className="mb-3 text-xs uppercase tracking-widest text-[var(--text-body-muted-2)]">YOUR LOG</h2>
         {/* Header */}
-        <h2 className="mb-0 mt-1 font-serif text-[2.6rem] leading-tight text-[var(--text-strong-alt)]">Log</h2>
+        <h2 className="mb-0 mt-1 font-serif text-[2.6rem] leading-none text-gray-900">Log</h2>
         <p className="mb-6 mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">Tap a date to revisit your day.</p>
 
-        <div className="mb-6 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-base-85)] px-5 py-5 shadow-sm backdrop-blur-sm">
-          <p className="mb-3 text-xs uppercase tracking-widest text-[var(--text-caption-2)]">Quote of the day</p>
+        <div className="mb-6 rounded-[var(--radius-lg)] border border-[var(--border-soft)] bg-[var(--surface-base)] p-[var(--space-4)] shadow-[var(--shadow-card-soft)]">
+          <p className="mb-3 text-xs uppercase tracking-widest text-[var(--text-body-muted-2)]">Quote of the day</p>
           <motion.p
             key={quoteIndex}
             className="text-sm italic text-[var(--text-body-muted)]"
@@ -183,243 +293,328 @@ export default function TaskHistoryScreen({
           <p className="mt-3 text-xs text-[var(--text-caption)]">Source: {QUOTES[quoteIndex].source}</p>
         </div>
 
+
         {/* Calendar Card */}
-        <div className="mb-6 rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-base-90)] px-5 py-5 shadow-sm backdrop-blur-sm">
-          {/* Month Navigation */}
-          <div className="mb-4 flex items-center justify-between">
-            <button
-              onClick={previousMonth}
-              className="rounded-full p-2 transition-all duration-150 ease-out hover:bg-[var(--surface-hover-panel-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base-90)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Previous month"
-            >
-              <ChevronLeft className="h-5 w-5 text-[var(--text-caption-2)]" />
-            </button>
-            <h3 className="text-lg font-serif text-[var(--text-strong-alt)]">
-              {calendarMonth.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}
-            </h3>
-            <button
-              onClick={nextMonth}
-              className="rounded-full p-2 transition-all duration-150 ease-out hover:bg-[var(--surface-hover-panel-muted)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base-90)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
-              aria-label="Next month"
-            >
-              <ChevronRight className="h-5 w-5 text-[var(--text-caption-2)]" />
-            </button>
-          </div>
+        <div className="mb-6 rounded-[var(--radius-lg)] border border-[var(--border-soft)] bg-[var(--surface-base)] p-[var(--space-4)] shadow-[var(--shadow-card-soft)]">
 
-          {/* Calendar Grid */}
-          <div className="grid grid-cols-7 gap-1.5">
-            {/* Day headers */}
-            {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
-              <div key={day} className="pb-3 text-center text-sm font-light text-[var(--text-caption-2)]">
-                {day}
-              </div>
-            ))}
-            
-            {/* Calendar days */}
-            {(() => {
-              const { daysInMonth, startingDayOfWeek, year, month } = getDaysInMonth(calendarMonth);
-              const days = [];
-              
-              // Empty cells for days before month starts
-              for (let i = 0; i < startingDayOfWeek; i++) {
-                days.push(<div key={`empty-${i}`} className="aspect-square" />);
-              }
-              
-              // Actual day cells
-              for (let day = 1; day <= daysInMonth; day++) {
-                const dateString = getLocalDateString(new Date(year, month, day));
-                const hasJournal = journalMap.has(dateString);
-                const hasTasks = tasksMap.has(dateString);
-                const today = isToday(year, month, day);
-                const isSelected = selectedDate && 
-                  selectedDate.getFullYear() === year &&
-                  selectedDate.getMonth() === month &&
-                  selectedDate.getDate() === day;
-
-                // Brand: journal uses the canopy pill accent; tasks use the teal completion accent.
-                const journalDotClass = today
-                  ? 'bg-[var(--surface-panel-track)] ring-1 ring-[color:var(--accent-pill)]/55'
-                  : isSelected
-                    ? 'bg-[var(--accent-pill-dark)]'
-                    : 'bg-[var(--accent-pill)]';
-                const taskDotClass = today
-                  ? 'bg-teal-100 ring-1 ring-teal-300/90'
-                  : isSelected
-                    ? 'bg-teal-700'
-                    : 'bg-teal-600';
-                
-                days.push(
-                  <button
-                    key={day}
-                    onClick={() => handleDateClick(year, month, day)}
-                    onMouseEnter={() => handleDateHover(year, month, day)}
-                    onMouseLeave={handleDateLeave}
-                    className={`
-                      aspect-square rounded-full flex flex-col items-center justify-center relative
-                      transition-all duration-150 ease-out font-light focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base-90)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40
-                      ${today 
-                        ? isSelected 
-                          ? 'bg-teal-500 text-white ring-2 ring-teal-300' 
-                          : 'bg-teal-500 text-white'
-                        : isSelected
-                          ? 'bg-[var(--surface-hover-panel-muted)] ring-2 ring-[color:var(--accent-pill)]/45'
-                          : 'hover:bg-[var(--surface-hover-panel-muted-50)]'
-                      }
-                      ${!today && !isSelected ? 'text-[var(--text-strong-alt)]' : ''}
-                    `}
-                  >
-                    <span className={`text-sm ${today || isSelected ? '' : ''}`}>
-                      {day}
-                    </span>
+          {/* Compact Calendar View */}
+          {viewMode === 'calendar' && (
+            <>
+              {/* Horizontal Scrollable Date Selector */}
+              <div className="mb-4 overflow-x-auto overflow-y-visible scrollbar-visible" style={{ overflowX: 'auto', overflowY: 'visible' }}>
+                <div className="flex gap-2 pb-2" style={{ minWidth: 'max-content', width: 'max-content' }}>
+                  {visibleDates.map((date, index) => {
+                    const isSelected = selectedDate && getLocalDateString(date) === getLocalDateString(selectedDate);
+                    const isToday = getLocalDateString(date) === getLocalDateString(new Date());
+                    const { tasks, journal } = getEntriesForDate(date);
+                    const hasContent = tasks.length > 0 || journal.length > 0;
                     
-                    {/* Dot indicators: journal (brand) vs completed tasks (teal) */}
-                    {(hasJournal || hasTasks) && (
-                      <div className="absolute bottom-1 flex gap-0.5">
-                        {hasJournal && (
-                          <div title="Journal" className={`w-1 h-1 rounded-full ${journalDotClass}`} />
-                        )}
-                        {hasTasks && (
-                          <div title="Tasks" className={`w-1 h-1 rounded-full ${taskDotClass}`} />
-                        )}
+                    return (
+                      <button
+                        key={`date-${index}`}
+                        onClick={() => setSelectedDate(date)}
+                        className={`flex-shrink-0 px-[var(--space-3)] py-[var(--space-2)] rounded-[var(--radius-full)] border transition-all duration-200 min-w-[60px] ${
+                          isSelected
+                            ? 'bg-[var(--text-strong-alt)] border-[var(--text-strong-alt)] text-white'
+                            : isToday
+                            ? 'bg-[var(--surface-base-90)] border-[var(--accent-teal)] text-[var(--accent-teal)]'
+                            : hasContent
+                            ? 'bg-[var(--surface-base-90)] border-[var(--border-soft)] text-[var(--text-strong-alt)]'
+                            : 'bg-[var(--surface-base-90)] border-[var(--border-soft)] text-[var(--text-caption-2)]'
+                        }`}
+                      >
+                        <div className="text-xs font-medium">
+                          {formatDateForSelector(date)}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            {/* Content Display Area */}
+              {selectedDate && (
+                <div className="rounded-[var(--radius-lg)] bg-[var(--surface-base)]">
+                  <div className="mb-4">
+                    <h4 className="mb-3 text-xs uppercase tracking-widest text-[var(--text-body-muted-2)]">
+                      TASKS
+                    </h4>
+                  </div>
+                  
+                  <div className="overflow-y-auto pr-1">
+                    {(() => {
+                      const { tasks, journal } = getEntriesForDate(selectedDate);
+                      const hasContent = tasks.length > 0 || journal.length > 0;
+                      
+                      if (!hasContent) {
+                        return (
+                          <div className="text-center py-8">
+                            <p className="text-[var(--text-caption-2)]">No activity on this day</p>
+                          </div>
+                        );
+                      }
+                      
+                      return (
+                        <>
+                          {/* Tasks Section */}
+                          {tasks.length > 0 && (
+                            <div className="mb-6">
+                                                            <div className="space-y-3">
+                                {tasks.map(task => {
+                                  const isCompleted = !!task.completedAt;
+                                  return (
+                                    <div key={task.id} className="flex items-start gap-[var(--space-3)] p-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border-soft-panel-3)] bg-[var(--surface-base-90)]">
+                                      <div className="flex items-center gap-2 mt-1">
+                                        {isCompleted ? (
+                                          <div className="w-4 h-4 rounded-full bg-[var(--accent-teal)]/10 flex items-center justify-center">
+                                            <div className="w-2 h-2 rounded-full bg-[var(--accent-teal)]" />
+                                          </div>
+                                        ) : null}
+                                      </div>
+                                      <div className="flex-1">
+                                        <p className={`text-sm ${isCompleted ? 'line-through text-[var(--text-caption-2)]' : 'text-[var(--text-strong-alt)]'}`}>
+                                          {task.text}
+                                        </p>
+                                        <div className="mt-1">
+                                          {isCompleted ? (
+                                            <span className="inline-flex items-center px-[var(--space-2)] py-[var(--space-1)] rounded-full text-xs font-medium bg-[var(--accent-teal)]/10 text-[var(--accent-teal)]">
+                                              Completed
+                                            </span>
+                                          ) : null}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Journal Section */}
+                          {journal.length > 0 && (
+                            <div>
+                              <p className="mb-3 text-xs font-light uppercase tracking-wider text-[var(--accent-pill)]">Journal</p>
+                              <div className="space-y-4">
+                                {journal.map((entry, entryIndex) => {
+                                  const entryId = `${getLocalDateString(selectedDate)}-${entryIndex}`;
+                                  const isExpanded = expandedJournal.has(entryId);
+                                  const displayText = isExpanded ? entry.response : truncateText(entry.response, 3);
+                                  
+                                  return (
+                                    <div key={entryIndex} className="rounded-2xl bg-white px-5 py-4 shadow-sm group relative">
+                                      {/* Date */}
+                                      <div className="mb-2 text-xs text-gray-400">
+                                        {new Date(entry.createdAt).toLocaleDateString('en-US', {
+                                          weekday: 'short',
+                                          month: 'short',
+                                          day: 'numeric',
+                                          hour: '2-digit',
+                                          minute: '2-digit'
+                                        })}
+                                      </div>
+                                      
+                                      {/* Prompt */}
+                                      {entry.prompt && (
+                                        <p className="mb-2 text-left text-[var(--text-strong)] [font-family:var(--font-family-display)] [font-size:1rem] [font-weight:var(--type-headline-weight)] [line-height:1.2]">
+                                          {entry.prompt}
+                                        </p>
+                                      )}
+                                      
+                                      {/* Response */}
+                                      <p className="text-sm text-[var(--text-strong-alt)] whitespace-pre-wrap">
+                                        {displayText}
+                                      </p>
+                                      
+                                      {/* Show more/less button */}
+                                      {entry.response.split('\n').length > 3 && (
+                                        <button
+                                          onClick={() => toggleJournalExpansion(entryId)}
+                                          className="mt-[var(--space-2)] text-xs text-[var(--accent-teal)] hover:text-[var(--accent-teal)]/80 transition-colors"
+                                        >
+                                          {isExpanded ? 'Show less' : 'Show more'}
+                                        </button>
+                                      )}
+                                      
+                                      {/* Photos */}
+                                      {entry.photoUrl && (
+                                        <div className="mt-3 flex gap-3 flex-wrap">
+                                          {entry.photoUrl.split(',').filter(photo => {
+                                            return photo && 
+                                                   photo.trim() && 
+                                                   photo !== 'data:image/png;base64,' &&
+                                                   photo !== 'data:image/png;base64' &&
+                                                   photo.length > 'data:image/png;base64,'.length;
+                                          }).map((photo, photoIndex) => {
+                                            const photoSrc = photo.trim();
+                                            const finalSrc = photoSrc.startsWith('data:') ? photoSrc : `data:image/png;base64,${photoSrc}`;
+                                            return (
+                                              <div 
+                                                key={photoIndex}
+                                                className="relative bg-white p-2 shadow-lg"
+                                                style={{
+                                                  width: '100px',
+                                                  paddingBottom: '12px',
+                                                }}
+                                              >
+                                                {/* Polaroid photo */}
+                                                <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
+                                                  <img
+                                                    src={finalSrc}
+                                                    alt={`Journal photo ${photoIndex + 1}`}
+                                                    className="w-full h-full object-contain"
+                                                    onError={(e) => {
+                                                      console.error('Failed to load photo:', photoSrc.substring(0, 100) + '...');
+                                                      e.currentTarget.style.display = 'none';
+                                                    }}
+                                                  />
+                                                </div>
+                                              </div>
+                                            );
+                                          })}
+                                        </div>
+                                      )}
+                                    </div>
+                                  );
+                                })}
+                              </div>
+                            </div>
+                          )}
+                        </>
+                      );
+                    })()}
+                  </div>
+                </div>
+              )}
+            </>
+          )}  
+
+          {/* List View */}
+          {viewMode === 'list' && (
+            <div className="space-y-4">
+              {getLastSevenDays().map((date, index) => {
+                const { tasks, journal } = getEntriesForDate(date);
+                const hasContent = tasks.length > 0 || journal.length > 0;
+                
+                if (!hasContent) return null;
+                
+                return (
+                  <motion.div
+                    key={getLocalDateString(date)}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: index * 0.1 }}
+                    className="rounded-[var(--radius-lg)] border border-[var(--border-soft)] bg-[var(--surface-base)] p-[var(--space-4)] shadow-[var(--shadow-card-soft)]"
+                  >
+                    <div className="mb-[var(--space-3)] flex items-center justify-between">
+                      <h4 className="type-caption text-[var(--text-strong)]">
+                        {formatDateHeader(date)}
+                      </h4>
+                    </div>
+                    
+                    {/* Tasks */}
+                    {tasks.length > 0 && (
+                      <div className="mb-[var(--space-2)]">
+                        <p className="mb-2 text-xs font-light uppercase tracking-wider text-[var(--accent-teal)]">Tasks</p>
+                        <div className="space-y-2">
+                          {tasks.map(task => (
+                            <div key={task.id} className="flex items-center gap-[var(--space-3)] text-sm text-[var(--text-strong-alt)]">
+                              <div className="w-4 h-4 rounded-full bg-[var(--accent-teal)]/10 flex items-center justify-center">
+                                <div className="w-2 h-2 rounded-full bg-[var(--accent-teal)]" />
+                              </div>
+                              <span className="line-through">{task.text}</span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
-                  </button>
+                    
+                    {/* Journal Entries */}
+                    {journal.length > 0 && (
+                      <div>
+                        <p className="mb-2 text-xs font-light uppercase tracking-wider text-[var(--accent-pill)]">Journal</p>
+                        <div className="space-y-3">
+                          {journal.map((entry, entryIndex) => (
+                            <div key={entryIndex} className="rounded-2xl bg-white px-5 py-4 shadow-sm group relative">
+                              {/* Date */}
+                              <div className="mb-2 text-xs text-gray-400">
+                                {new Date(entry.createdAt).toLocaleDateString('en-US', {
+                                  weekday: 'short',
+                                  month: 'short',
+                                  day: 'numeric',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </div>
+                              
+                              {/* Prompt */}
+                              {entry.prompt && (
+                                <p className="mb-2 text-left text-[var(--text-strong)] [font-family:var(--font-family-display)] [font-size:1rem] [font-weight:var(--type-headline-weight)] [line-height:1.2]">
+                                  {entry.prompt}
+                                </p>
+                              )}
+                              
+                              {/* Response */}
+                              <p className="text-sm text-[var(--text-strong-alt)] whitespace-pre-wrap">
+                                {entry.response}
+                              </p>
+                              
+                              {/* Photos */}
+                              {entry.photoUrl && (
+                                <div className="mt-3 flex gap-3 flex-wrap">
+                                  {entry.photoUrl.split(',').filter(photo => {
+                                    return photo && 
+                                           photo.trim() && 
+                                           photo !== 'data:image/png;base64,' &&
+                                           photo !== 'data:image/png;base64' &&
+                                           photo.length > 'data:image/png;base64,'.length;
+                                  }).map((photo, photoIndex) => {
+                                    const photoSrc = photo.trim();
+                                    const finalSrc = photoSrc.startsWith('data:') ? photoSrc : `data:image/png;base64,${photoSrc}`;
+                                    return (
+                                      <div 
+                                        key={photoIndex}
+                                        className="relative bg-white p-2 shadow-lg"
+                                        style={{
+                                          width: '100px',
+                                          paddingBottom: '12px',
+                                        }}
+                                      >
+                                        {/* Polaroid photo */}
+                                        <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
+                                          <img
+                                            src={finalSrc}
+                                            alt={`Journal photo ${photoIndex + 1}`}
+                                            className="w-full h-full object-contain"
+                                            onError={(e) => {
+                                              console.error('Failed to load photo:', photoSrc.substring(0, 100) + '...');
+                                              e.currentTarget.style.display = 'none';
+                                            }}
+                                          />
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </motion.div>
                 );
-              }
+              })}
               
-              return days;
-            })()}
-          </div>
-
-          {/* Selected Date Preview */}
-          {selectedDate && selectedHasContent && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-6 pt-6 border-t border-gray-100"
-            >
-              <p className="text-sm text-gray-500 mb-3">
-                {formatDateHeader(selectedDate)}
-              </p>
-              
-              {selectedEntries.journal.length > 0 && (
-                <div className="mb-4">
-                  <p className="mb-3 text-xs font-light uppercase tracking-wider text-[var(--accent-pill)]">Journal</p>
-                  {selectedEntries.journal.map((entry, index) => (
-                    <div key={index} className="mb-4 last:mb-0">
-                      {entry.prompt && (
-                        <p className="mb-1 font-serif text-sm italic text-[var(--text-caption-2)]">
-                          {entry.prompt}
-                        </p>
-                      )}
-                      <p className="mb-2 text-sm text-[var(--text-strong-alt)]">
-                        {entry.response}
-                      </p>
-                      {entry.photoUrl && (
-                        <div 
-                          className="relative bg-white p-2 shadow-md inline-block mt-2"
-                          style={{
-                            maxWidth: '150px',
-                          }}
-                        >
-                          <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
-                            <img
-                              src={entry.photoUrl}
-                              alt="Journal entry photo"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
+              {/* Empty state for list view */}
+              {getLastSevenDays().every(date => {
+                const { tasks, journal } = getEntriesForDate(date);
+                return tasks.length === 0 && journal.length === 0;
+              }) && (
+                <div className="text-center py-8">
+                  <p className="text-[var(--text-caption-2)]">No activity in the last 7 days</p>
                 </div>
               )}
-              
-              {selectedEntries.tasks.length > 0 && (
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-teal-700 mb-2">Tasks</p>
-                  {selectedEntries.tasks.map((task, index) => (
-                    <p key={index} className="text-sm text-teal-900/90 mb-1">
-                      • {task.text}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
-
-          {/* Hovered Date Preview - Only show when nothing is selected */}
-          {!selectedDate && hoveredDate && (hoveredEntries.journal.length > 0 || hoveredEntries.tasks.length > 0) && (
-            <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: 'auto' }}
-              exit={{ opacity: 0, height: 0 }}
-              className="mt-6 pt-6 border-t border-gray-100"
-            >
-              <p className="text-sm text-gray-500 mb-3">
-                {formatDateHeader(hoveredDate)}
-              </p>
-              
-              {hoveredEntries.journal.length > 0 && (
-                <div className="mb-4">
-                  <p className="mb-3 text-xs font-light uppercase tracking-wider text-[var(--accent-pill)]">Journal</p>
-                  {hoveredEntries.journal.map((entry, index) => (
-                    <div key={index} className="mb-4 last:mb-0">
-                      {entry.prompt && (
-                        <p className="mb-1 font-serif text-sm italic text-[var(--text-caption-2)]">
-                          {entry.prompt}
-                        </p>
-                      )}
-                      <p className="mb-2 line-clamp-2 text-sm text-[var(--text-strong-alt)]">
-                        {entry.response}
-                      </p>
-                      {entry.photoUrl && (
-                        <div 
-                          className="relative bg-white p-2 shadow-md inline-block mt-2"
-                          style={{
-                            maxWidth: '150px',
-                          }}
-                        >
-                          <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
-                            <img
-                              src={entry.photoUrl}
-                              alt="Journal entry photo"
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {hoveredEntries.tasks.length > 0 && (
-                <div>
-                  <p className="text-xs uppercase tracking-wider text-teal-700 mb-2">Tasks</p>
-                  {hoveredEntries.tasks.map((task, index) => (
-                    <p key={index} className="text-sm text-teal-900/90 mb-1">
-                      • {task.text}
-                    </p>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          )}
-
-          {/* Legend */}
-          <div className="mt-6 flex items-center gap-4 border-t border-[var(--border-soft-panel-2)] pt-4 text-xs font-light">
-            <div className="flex items-center gap-1.5 text-teal-800">
-              <div className="w-1.5 h-1.5 rounded-full bg-teal-600" />
-              <span>tasks</span>
             </div>
-            <div className="flex items-center gap-1.5 text-[var(--accent-pill)]">
-              <div className="h-1.5 w-1.5 rounded-full bg-[var(--accent-pill)]" />
-              <span>journal</span>
-            </div>
-          </div>
+          )}
           
           
         </div>

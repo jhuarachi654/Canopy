@@ -112,6 +112,11 @@ const backgroundThemes: BackgroundTheme[] = [
 export default function App() {
   const prefersReducedMotion = useReducedMotion();
   const [activeScreen, setActiveScreen] = useState<'todos' | 'game' | 'log' | 'journal' | 'settings'>('todos');
+
+  // Reset scroll position when navigating between screens
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [activeScreen]);
   const [todos, setTodos] = useState<Todo[]>(() => {
     const now = new Date();
     return [
@@ -1400,7 +1405,8 @@ export default function App() {
 
   return (
     <div
-      className="relative flex flex-col bg-[#FAFAFA] min-h-dvh overflow-visible"
+      className="relative flex flex-col bg-[#FAFAFA]"
+      style={{ height: '100dvh', minHeight: '100dvh', overflow: 'hidden' }}
     >
       <CanopyScreenBackground variant={sharedBackgroundVariant} />
       {/* Removed immersive game background - using clean gradient instead */}
@@ -1428,6 +1434,7 @@ export default function App() {
       {/* Screen Content */}
       <div 
         className="flex-1 relative z-10"
+        style={{ minHeight: 0, overflow: 'hidden' }}
         key={activeScreen}
       >
         {activeScreen === 'todos' && (
@@ -1494,16 +1501,7 @@ export default function App() {
       {focusSession && (
         <FocusTaskScreen
           todo={focusSession.todo}
-          priorityTag={focusSession.priorityTag}
           onClose={() => setFocusSession(null)}
-          onSessionFinish={({ totalSecondsFocused, markTaskComplete }) => {
-            addXP(Math.floor(totalSecondsFocused / 60));
-            if (markTaskComplete && !focusSession.todo.completed) {
-              toggleTodo(focusSession.todo.id);
-            }
-            window.dispatchEvent(new Event('canopy-focus-session-celebrate'));
-            setFocusSession(null);
-          }}
         />
       )}
     </div>

@@ -377,7 +377,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         </div>
 
         {/* CTA Button - Fixed to bottom with keyboard awareness */}
-        <div className="shrink-0 px-[var(--space-6)] sm:px-[var(--space-10)] transition-all duration-300 ease-out" style={{ paddingBottom: `${Math.max(32, keyboardHeight + 16)}px` }}>
+        <div className="shrink-0 px-[var(--space-6)] sm:px-[var(--space-10)] transition-all duration-300 ease-out mt-auto" style={{ paddingBottom: `${Math.max(32, keyboardHeight + 16)}px` }}>
           {/* Step 1: Name */}
           {currentStep === 0 && (
             <button

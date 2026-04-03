@@ -699,6 +699,7 @@ export default function GameScreen({
           {Object.entries(plants).length > 6 && (
             <div className="mt-[var(--space-3)]">
               <motion.button
+                onClick={() => setShowAllPlants(!showAllPlants)}
                 initial={{ scale: 0, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
                 transition={{ 

@@ -91,11 +91,13 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
 
   const handleMouseDown = (e: React.MouseEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     startHold(e.clientX, e.clientY);
   };
 
   const handleTouchStart = (e: React.TouchEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     const touch = e.touches[0];
     startHold(touch.clientX, touch.clientY);
   };
@@ -639,8 +641,8 @@ export default function FocusTaskScreen({ todo, onClose, targetTime }: FocusTask
         />
       </div>
 
-      {/* Decorative Plants - Only show after session starts */}
-      {isRunning && plantPositions.map((plantData) => {
+      {/* Decorative Plants - Show during focus session */}
+      {plantPositions.map((plantData) => {
         return (
           <DecorativePlant
             key={plantData.plant.id}

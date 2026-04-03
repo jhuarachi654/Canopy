@@ -283,7 +283,7 @@ export default function JournalScreen({
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col" style={{ height: '100dvh', minHeight: '100dvh' }}>
       {/* Header - pinned to top */}
       <div className="shrink-0 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4">
         <h2 className="type-label mb-3 uppercase tracking-widest text-gray-400">TODAY'S REFLECTION</h2>
@@ -292,8 +292,8 @@ export default function JournalScreen({
       </div>
 
       {/* Middle content - flexible space that absorbs keyboard */}
-      <div className="flex flex-col">
-        <div className="custom-scrollbar overflow-y-auto overscroll-y-contain px-4 py-8 transition-all duration-300 ease-out" style={{ paddingBottom: `${Math.max(128, keyboardHeight + 32)}px` }}>
+      <div className="flex flex-col" style={{ minHeight: 0 }}>
+        <div className="custom-scrollbar overflow-y-auto overscroll-y-contain px-4 py-8 transition-all duration-300 ease-out flex-1" style={{ paddingBottom: `${Math.max(128, keyboardHeight + 32)}px`, minHeight: 0 }}>
           {/* Prompt Card */}
           <div className="mb-5 rounded-2xl bg-white px-5 pb-5 pt-5 shadow-sm">
             {/* Editing indicator */}

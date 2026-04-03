@@ -113,8 +113,8 @@ export default function SettingsScreen({
   const plantName = currentLevelInfo?.title || "Getting Started";
 
   return (
-    <div className="flex flex-col min-h-screen pb-20">
-      <div className="px-4 pt-4">
+    <div className="flex flex-col" style={{ height: '100dvh', minHeight: '100dvh' }}>
+      <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pt-4 pb-24" style={{ minHeight: 0 }}>
         <h2 className="mb-6 font-serif text-4xl text-gray-900">Profile</h2>
 
         {/* Profile header */}

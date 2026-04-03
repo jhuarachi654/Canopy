@@ -121,9 +121,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       className={`absolute inset-0 z-[100] flex bg-[var(--bg-screen-auth)] overflow-hidden`}
       style={{ 
         height: '100dvh',
-        paddingBottom: keyboardHeight > 0 ? `${keyboardHeight}px` : 'max(env(safe-area-inset-bottom), 0px)',
-        paddingTop: 'max(env(safe-area-inset-top), 12px)',
-        transition: 'padding-bottom 0.25s ease-out'
+        paddingBottom: 'max(env(safe-area-inset-bottom), 0px)',
+        paddingTop: 'max(env(safe-area-inset-top), 12px)'
       }}
     >
       <CanopyScreenBackground

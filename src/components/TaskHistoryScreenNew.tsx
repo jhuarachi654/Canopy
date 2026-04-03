@@ -173,7 +173,7 @@ export default function TaskHistoryScreen({
           <p className="mb-3 text-xs uppercase tracking-widest text-[var(--text-caption-2)]">Quote of the day</p>
           <motion.p
             key={quoteIndex}
-            className="line-clamp-1 text-sm italic text-[var(--text-body-muted)]"
+            className="text-sm italic text-[var(--text-body-muted)]"
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.28 }}

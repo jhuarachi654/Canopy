@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, useImperativeHandle } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Play, Pause, RotateCcw, Coffee, Flower, TreePine, Sprout, Target } from 'lucide-react';
+import { X, Play, Pause, RotateCcw, Coffee, Flower, TreePine, Sprout, Target, ChevronDown, Music } from 'lucide-react';
 import type { Todo } from '../App';
 
 interface Plant {
@@ -201,6 +201,8 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
   const [showBreakConfirm, setShowBreakConfirm] = useState(false);
   const [showBreakComplete, setShowBreakComplete] = useState(false);
   const [autoStartNext, setAutoStartNext] = useState(false);
+  const [selectedMusic, setSelectedMusic] = useState('lofi');
+  const [showMusicDropdown, setShowMusicDropdown] = useState(false);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoStartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -525,6 +527,47 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
               </p>
             </div>
           </div>
+        </div>
+
+        {/* Music Dropdown */}
+        <div className="relative">
+          <button
+            onClick={() => setShowMusicDropdown(!showMusicDropdown)}
+            className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.97] touch-manipulation"
+          >
+            <Music className="h-4 w-4" />
+            <span className="capitalize">{selectedMusic}</span>
+            <ChevronDown className={`h-4 w-4 transition-transform duration-200 ${showMusicDropdown ? 'rotate-180' : ''}`} />
+          </button>
+
+          <AnimatePresence>
+            {showMusicDropdown && (
+              <motion.div
+                initial={{ opacity: 0, y: -10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.15 }}
+                className="absolute right-0 top-full mt-2 w-40 rounded-[var(--radius-lg)] border border-[var(--border-soft)] bg-[var(--surface-base)] shadow-[var(--shadow-card-strong)] overflow-hidden z-[9999]"
+              >
+                {['ambiance', 'lofi', 'techno', 'upbeat'].map((option) => (
+                  <button
+                    key={option}
+                    onClick={() => {
+                      setSelectedMusic(option);
+                      setShowMusicDropdown(false);
+                    }}
+                    className={`w-full px-4 py-3 text-left text-sm capitalize transition-all duration-150 ease-out hover:bg-[var(--surface-hover-panel)] ${
+                      selectedMusic === option
+                        ? 'bg-[var(--surface-hover-panel)] text-[var(--text-strong)] font-medium'
+                        : 'text-[var(--text-body-muted)]'
+                    }`}
+                  >
+                    {option}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 

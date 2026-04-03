@@ -92,14 +92,20 @@ export default function FocusTaskModal({ isOpen, onClose, onConfirm, todo }: Foc
                 <span className="text-sm text-[var(--text-body-muted)]">minutes</span>
               </div>
             ) : (
-              <div className="flex flex-wrap gap-[var(--space-2)]">
+              <div className="flex flex-wrap gap-[var(--space-2)] touch-manipulation">
                 <button
                   onClick={() => setTargetTime(15)}
                   onTouchStart={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     setTargetTime(15);
                   }}
-                  className="px-[var(--space-3)] py-[var(--space-2)] min-h-[44px] min-w-[44px] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] touch-manipulation"
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  className="px-[var(--space-3)] py-[var(--space-2)] min-h-[44px] min-w-[44px] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] touch-manipulation select-none"
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 >
                   15 min
                 </button>
@@ -107,9 +113,15 @@ export default function FocusTaskModal({ isOpen, onClose, onConfirm, todo }: Foc
                   onClick={() => setTargetTime(25)}
                   onTouchStart={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     setTargetTime(25);
                   }}
-                  className="px-[var(--space-3)] py-[var(--space-2)] min-h-[44px] min-w-[44px] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] touch-manipulation"
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  className="px-[var(--space-3)] py-[var(--space-2)] min-h-[44px] min-w-[44px] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] touch-manipulation select-none"
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 >
                   25 min
                 </button>
@@ -117,9 +129,15 @@ export default function FocusTaskModal({ isOpen, onClose, onConfirm, todo }: Foc
                   onClick={() => setTargetTime(45)}
                   onTouchStart={(e) => {
                     e.preventDefault();
+                    e.stopPropagation();
                     setTargetTime(45);
                   }}
-                  className="px-[var(--space-3)] py-[var(--space-2)] min-h-[44px] min-w-[44px] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] touch-manipulation"
+                  onTouchEnd={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  className="px-[var(--space-3)] py-[var(--space-2)] min-h-[44px] min-w-[44px] rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] touch-manipulation select-none"
+                  style={{ touchAction: 'manipulation', WebkitTapHighlightColor: 'transparent' }}
                 >
                   45 min
                 </button>

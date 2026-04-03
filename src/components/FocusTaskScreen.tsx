@@ -212,25 +212,57 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
   const [isIntro, setIsIntro] = useState(true);
   const proximityStates = useRef<Map<string, { isNear: boolean, distance: number }>>(new Map());
 
-  // Generate positions for plants in 4 corners of the screen
+  // Generate positions for plants to match reference image layout
   useEffect(() => {
     const unlockedPlants = mockPlants.filter(plant => plant.unlocked);
     const w = window.innerWidth;
     const h = window.innerHeight;
     const plantSize = 80;
-    const margin = 20; // margin from edges
+    const margin = 30; // margin from edges
     
-    // Define the 4 corners
-    const cornerPositions = [
-      { x: margin, y: 160 }, // Top left (below header)
-      { x: w - plantSize - margin, y: 160 }, // Top right (below header)
-      { x: margin, y: h - plantSize - 180 }, // Bottom left (above controls)
-      { x: w - plantSize - margin, y: h - plantSize - 180 }, // Bottom right (above controls)
-    ];
+    // Calculate center positions
+    const centerX = w / 2;
+    const centerY = h / 2;
     
+    // Define positions to match reference image - plants around the timer
     const positions: PlantPosition[] = unlockedPlants.map((plant, index) => {
-      const position = cornerPositions[index % 4];
-      return { plant, position };
+      // Position plants in the 4 quadrants around the timer
+      switch (index % 4) {
+        case 0: // Top left area
+          return { 
+            plant, 
+            position: { 
+              x: margin, 
+              y: 180 // Below header
+            } 
+          };
+        case 1: // Top right area
+          return { 
+            plant, 
+            position: { 
+              x: w - plantSize - margin, 
+              y: 180 // Below header
+            } 
+          };
+        case 2: // Bottom left - near play button
+          return { 
+            plant, 
+            position: { 
+              x: margin, 
+              y: centerY + 80 // Below timer, near controls
+            } 
+          };
+        case 3: // Bottom right - near coffee button
+          return { 
+            plant, 
+            position: { 
+              x: w - plantSize - margin, 
+              y: centerY + 80 // Below timer, near controls
+            } 
+          };
+        default:
+          return { plant, position: { x: margin, y: 180 } };
+      }
     });
     
     setPlantPositions(positions);
@@ -347,17 +379,31 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
         audioRef.current = new Audio();
         audioRef.current.loop = true;
         audioRef.current.volume = 0.3;
+        audioRef.current.crossOrigin = 'anonymous';
       }
       
       // Update source if music type changed
-      if (audioRef.current.src !== musicUrls[selectedMusic]) {
-        audioRef.current.src = musicUrls[selectedMusic];
+      const musicUrl = musicUrls[selectedMusic];
+      if (musicUrl && audioRef.current.src !== musicUrl) {
+        audioRef.current.src = musicUrl;
+        audioRef.current.load(); // Load the new source
       }
       
-      // Play the music
-      audioRef.current.play().catch(() => {
-        // Autoplay blocked, will try again on user interaction
-      });
+      // Play the music with better error handling
+      const playAudio = () => {
+        if (audioRef.current) {
+          audioRef.current.play().catch((err) => {
+            console.log('Audio play error:', err);
+            // If autoplay blocked, we need user interaction
+            if (err.name === 'NotAllowedError') {
+              console.log('Autoplay blocked - will try after user interaction');
+            }
+          });
+        }
+      };
+      
+      // Small delay to ensure audio is loaded
+      setTimeout(playAudio, 100);
     } else {
       // Pause when timer stops
       if (audioRef.current) {

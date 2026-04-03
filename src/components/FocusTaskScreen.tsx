@@ -66,37 +66,8 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
     const newY = e.clientY - dragStart.y;
     const maxX = window.innerWidth - 100;
     const maxY = window.innerHeight - 100;
-    
-    // Define multiple restricted zones for specific UI elements
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
-    
-    const restrictedZones = [
-      // Header area (title, subtitle, music dropdown)
-      { left: 0, right: window.innerWidth, top: 0, bottom: 140 },
-      // Task title area ("FOCUSING ON:" + task name)
-      { left: centerX - 250, right: centerX + 250, top: 140, bottom: 240 },
-      // Timer area
-      { left: centerX - 150, right: centerX + 150, top: centerY - 150, bottom: centerY + 150 },
-      // Control buttons area
-      { left: centerX - 150, right: centerX + 150, top: centerY + 150, bottom: centerY + 250 }
-    ];
-    
-    let constrainedX = Math.max(0, Math.min(newX, maxX));
-    let constrainedY = Math.max(0, Math.min(newY, maxY));
-    
-    // Check if plant would overlap with any restricted zone
-    const plantRight = constrainedX + 100;
-    const plantBottom = constrainedY + 100;
-    
-    for (const zone of restrictedZones) {
-      if (constrainedX < zone.right && plantRight > zone.left &&
-          constrainedY < zone.bottom && plantBottom > zone.top) {
-        // Plant is in restricted zone, keep it at previous position
-        return;
-      }
-    }
-    
+    const constrainedX = Math.max(0, Math.min(newX, maxX));
+    const constrainedY = Math.max(0, Math.min(newY, maxY));
     onPositionChange({ x: constrainedX, y: constrainedY });
   }, [isDragging, dragStart, onPositionChange]);
 
@@ -107,37 +78,8 @@ const DecorativePlant = React.forwardRef<HTMLDivElement, DecorativePlantProps>(
     const newY = touch.clientY - dragStart.y;
     const maxX = window.innerWidth - 100;
     const maxY = window.innerHeight - 100;
-    
-    // Define multiple restricted zones for specific UI elements
-    const centerX = window.innerWidth / 2;
-    const centerY = window.innerHeight / 2;
-    
-    const restrictedZones = [
-      // Header area (title, subtitle, music dropdown)
-      { left: 0, right: window.innerWidth, top: 0, bottom: 140 },
-      // Task title area ("FOCUSING ON:" + task name)
-      { left: centerX - 250, right: centerX + 250, top: 140, bottom: 240 },
-      // Timer area
-      { left: centerX - 150, right: centerX + 150, top: centerY - 150, bottom: centerY + 150 },
-      // Control buttons area
-      { left: centerX - 150, right: centerX + 150, top: centerY + 150, bottom: centerY + 250 }
-    ];
-    
-    let constrainedX = Math.max(0, Math.min(newX, maxX));
-    let constrainedY = Math.max(0, Math.min(newY, maxY));
-    
-    // Check if plant would overlap with any restricted zone
-    const plantRight = constrainedX + 100;
-    const plantBottom = constrainedY + 100;
-    
-    for (const zone of restrictedZones) {
-      if (constrainedX < zone.right && plantRight > zone.left &&
-          constrainedY < zone.bottom && plantBottom > zone.top) {
-        // Plant is in restricted zone, keep it at previous position
-        return;
-      }
-    }
-    
+    const constrainedX = Math.max(0, Math.min(newX, maxX));
+    const constrainedY = Math.max(0, Math.min(newY, maxY));
     onPositionChange({ x: constrainedX, y: constrainedY });
   }, [isDragging, dragStart, onPositionChange]);
 
@@ -261,6 +203,7 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
   const [autoStartNext, setAutoStartNext] = useState(false);
   const [selectedMusic, setSelectedMusic] = useState('lofi');
   const [showMusicDropdown, setShowMusicDropdown] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const autoStartTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
@@ -385,6 +328,47 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
       }
     };
   }, [isRunning, timeLeft, isBreak, targetTime]);
+
+  // Handle ambient music playback
+  useEffect(() => {
+    // Music URLs from Pixabay (royalty-free)
+    const musicUrls: Record<string, string> = {
+      'ambiance': 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf77a.mp3?filename=soft-piano-100-bpm-121529.mp3',
+      'lofi': 'https://cdn.pixabay.com/download/audio/2022/03/24/audio_c8c8a73467.mp3?filename=lofi-study-1128.mp3',
+      'techno': 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0a13f69d2.mp3?filename=electronic-future-beats-1178.mp3',
+      'upbeat': 'https://cdn.pixabay.com/download/audio/2022/01/14/audio_01c6d3a0b9.mp3?filename=upbeat-rock-1024.mp3'
+    };
+
+    if (isRunning && selectedMusic !== 'none') {
+      // Create or update audio
+      if (!audioRef.current) {
+        audioRef.current = new Audio();
+        audioRef.current.loop = true;
+        audioRef.current.volume = 0.3;
+      }
+      
+      // Update source if music type changed
+      if (audioRef.current.src !== musicUrls[selectedMusic]) {
+        audioRef.current.src = musicUrls[selectedMusic];
+      }
+      
+      // Play the music
+      audioRef.current.play().catch(() => {
+        // Autoplay blocked, will try again on user interaction
+      });
+    } else {
+      // Pause when timer stops
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    }
+
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+      }
+    };
+  }, [isRunning, selectedMusic]);
 
   const formatTime = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
@@ -567,7 +551,7 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
       })}
       
       {/* Header */}
-      <div className="relative z-20 flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+      <div className="relative z-[100] flex items-center justify-between p-4 border-b border-gray-200 bg-white">
         <div className="flex items-center gap-[var(--space-3)]">
           <button
             onClick={onClose}
@@ -588,7 +572,7 @@ export default function FocusTaskScreen({ todo, onClose, targetTime = 25 }: Focu
         </div>
 
         {/* Music Dropdown */}
-        <div className="relative">
+        <div className="relative z-[101]">
           <button
             onClick={() => setShowMusicDropdown(!showMusicDropdown)}
             className="flex items-center gap-2 px-3 py-2 rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base)] text-sm text-[var(--text-body-muted)] hover:bg-[var(--surface-hover-panel)] hover:text-[var(--text-body)] transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.97] touch-manipulation"

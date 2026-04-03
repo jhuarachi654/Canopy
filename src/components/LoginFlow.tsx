@@ -207,6 +207,17 @@ const LoginFlow: React.FC<LoginFlowProps> = ({ onAuthSuccess, onGuestMode }) => 
                   'Sign Up'
                 )}
               </button>
+              
+              {/* Guest mode option */}
+              <div className="mt-[var(--space-4)] text-center">
+                <button
+                  type="button"
+                  onClick={onGuestMode}
+                  className="type-caption text-[var(--text-body-muted-2)] transition-all duration-150 ease-out hover:underline hover:text-[var(--text-body)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-auth-card)] active:scale-[0.97]"
+                >
+                  Continue as guest
+                </button>
+              </div>
             </div>
           </div>
         </motion.div>

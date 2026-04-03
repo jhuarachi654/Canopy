@@ -3,6 +3,12 @@ import { motion } from 'motion/react';
 import { ChevronRight, User, Sparkles, Focus, Bell, CircleHelp, Bug } from 'lucide-react';
 import type { PlayerProgress } from '../App';
 
+// Import plant images for consistency
+import plant1 from '../assets/plants/1- plant.png';
+import plant2 from '../assets/plants/Plant 2.png';
+import plant3 from '../assets/plants/Plant 3.png';
+import plant4 from '../assets/plants/grehrehr 6.png';
+
 const FOCUS_MODE_STORAGE_KEY = 'lifelevel-focus-mode';
 const FOCUS_MODE_UPDATED_EVENT = 'canopy-focus-mode-updated';
 
@@ -38,6 +44,41 @@ export default function SettingsScreen({
       return true;
     }
   });
+  const [selectedPlant, setSelectedPlant] = useState('quiet-fern');
+
+  // Load selected plant from localStorage
+  useEffect(() => {
+    try {
+      const savedPlant = localStorage.getItem('lifelevel-selected-plant');
+      if (savedPlant) {
+        setSelectedPlant(savedPlant);
+      }
+    } catch (error) {
+      console.warn('Could not load selected plant:', error);
+    }
+  }, []);
+
+  // Plant configuration
+  const plants = {
+    'quiet-fern': {
+      name: 'Quiet Fern',
+      image: plant1,
+    },
+    'wild-clover': {
+      name: 'Wild Clover',
+      image: plant2,
+    },
+    'rose-moss': {
+      name: 'Rose Moss',
+      image: plant3,
+    },
+    'blue-sage': {
+      name: 'Blue Sage',
+      image: plant4,
+    },
+  };
+
+  const currentPlant = plants[selectedPlant as keyof typeof plants] || plants['quiet-fern'];
 
   useEffect(() => {
     const syncFocusMode = () => {
@@ -84,13 +125,18 @@ export default function SettingsScreen({
         {/* Profile header */}
         <div className="mb-4 rounded-3xl border border-[var(--border-soft)] bg-[var(--surface-base-85)] p-6 shadow-sm backdrop-blur-sm">
           <div className="flex items-center gap-4">
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--surface-card-subtle-9)] text-2xl text-[var(--accent-pill)]">
-              🌿
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--surface-card-subtle-9)]">
+              <img 
+                src={currentPlant.image} 
+                alt={currentPlant.name}
+                className="h-10 w-10 object-contain"
+                style={{ imageRendering: 'pixelated' }}
+              />
             </div>
             <div className="flex-1">
               <p className="text-xs uppercase tracking-widest text-[var(--text-caption-2)]">Your profile</p>
               <p className="text-xl text-[var(--text-strong-alt)]">{userName}</p>
-              <p className="text-sm text-[var(--text-body-muted-2)]">Current plant: {plantName}</p>
+              <p className="text-sm text-[var(--text-body-muted-2)]">Current plant: {currentPlant.name}</p>
             </div>
           </div>
         </div>

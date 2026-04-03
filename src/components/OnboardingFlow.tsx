@@ -4,10 +4,10 @@ import svgPaths from '../imports/Frame47296-1/svg-0hdeo07ddu';
 import { Check, ChevronLeft, Target, Lightbulb } from 'lucide-react';
 
 // Plant images for selection screen
-import quietFernImg from 'figma:asset/7438a9d659ebf123bfbcca1916fe079babb35132.png';
-import wildCloverImg from 'figma:asset/4c899badb6a576e6df75d3cb576969dd9e07298d.png';
-import roseMossImg from 'figma:asset/34ec7cd771dafa77769204ece804cb31dcd57a39.png';
-import blueSageImg from '../assets/blue-sage-new.png';
+import plant1 from '../assets/plants/1- plant.png';
+import plant2 from '../assets/plants/Plant 2.png';
+import plant3 from '../assets/plants/Plant 3.png';
+import plant4 from '../assets/plants/grehrehr 6.png';
 import CanopyScreenBackground from './CanopyScreenBackground';
 
 const FOCUS_MODE_STORAGE_KEY = 'lifelevel-focus-mode';
@@ -31,25 +31,25 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       id: 'quiet-fern',
       name: 'Quiet Fern',
       subtitle: 'calm & steady',
-      image: quietFernImg,
+      image: plant1,
     },
     {
       id: 'wild-clover',
       name: 'Wild Clover',
       subtitle: 'resilient & bright',
-      image: wildCloverImg,
+      image: plant2,
     },
     {
       id: 'rose-moss',
       name: 'Rose Moss',
       subtitle: 'soft & enduring',
-      image: roseMossImg,
+      image: plant3,
     },
     {
       id: 'blue-sage',
       name: 'Blue Sage',
       subtitle: 'deep & thoughtful',
-      image: blueSageImg,
+      image: plant4,
     },
   ];
 
@@ -97,8 +97,12 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
 
   return (
     <div
-      className={`absolute inset-0 z-[100] flex min-h-[100dvh] flex-col bg-[var(--bg-screen-auth)] overflow-y-auto overscroll-y-contain`}
-      style={{ paddingTop: 'max(env(safe-area-inset-top), 12px)' }}
+      className={`absolute inset-0 z-[100] flex min-h-screen flex-col bg-[var(--bg-screen-auth)] overflow-y-auto overscroll-y-contain`}
+      style={{ 
+        height: '100dvh',
+        paddingTop: 'max(env(safe-area-inset-top), 12px)',
+        paddingBottom: 'max(env(safe-area-inset-bottom), 0px)'
+      }}
     >
       <CanopyScreenBackground
         variant={
@@ -113,7 +117,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
       />
 
       {/* Content: max 393px (frame width), centered on large viewports */}
-      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[min(393px,100%)] flex-1 flex-col px-[var(--space-6)] pb-[var(--space-8)] sm:px-[var(--space-10)]">
+      <div className="relative z-10 mx-auto flex min-h-0 w-full max-w-[min(393px,100%)] flex-1 flex-col px-[var(--space-6)] sm:px-[var(--space-10)]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), var(--space-8))' }}>
         <div className="flex h-11 shrink-0 items-center justify-between">
           {currentStep > 0 ? (
             <button
@@ -367,7 +371,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
                         />
                       </div>
 
-                      <p className="type-body mb-[var(--space-1)] text-center italic text-[var(--text-strong-alt)]">
+                      <p className="type-body mb-[var(--space-1)] text-center text-[var(--text-strong-alt)]">
                         {plant.name}
                       </p>
                       <p className="type-caption text-center text-[var(--text-caption-7)]">
@@ -392,7 +396,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
         </div>
 
         <div
-          className={`flex shrink-0 justify-center gap-[var(--space-2)] pt-[var(--space-3)] ${currentStep === 3 ? 'pb-[max(env(safe-area-inset-bottom),var(--space-4))]' : 'pb-[max(env(safe-area-inset-bottom),min(8vh,3.25rem))]'}`}
+          className="flex shrink-0 justify-center gap-[var(--space-2)] pt-[var(--space-3)]"
+          style={{ paddingBottom: 'max(env(safe-area-inset-bottom), var(--space-4))' }}
           role="status"
           aria-label={`Step ${currentStep + 1} of 4`}
         >

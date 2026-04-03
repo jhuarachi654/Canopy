@@ -17,12 +17,42 @@ interface PlantPosition {
   isDragging?: boolean;
 }
 
-// Mock plant data - will be updated with real plant data
+// Import plant images
+import plant1 from '../assets/plants/1- plant.png';
+import plant2 from '../assets/plants/Plant 2.png';
+import plant3 from '../assets/plants/Plant 3.png';
+import plant4 from '../assets/plants/grehrehr 6.png';
+import plant5 from '../assets/plants/grehrehr 7.png';
+import plant6 from '../assets/plants/grehrehr 8.png';
+import plant7 from '../assets/plants/grehrehr 9.png';
+import plant8 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 1.png';
+import plant9 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 2.png';
+import plant10 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 3.png';
+import plant11 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 4.png';
+import plant12 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 5.png';
+import plant13 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 6.png';
+import plant14 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 7.png';
+import plant15 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 8.png';
+import plant16 from '../assets/plants/u9335614566_collection_of_pixel_art_potted_succulent_sprite_8_c38ec370-374d-45f9-b502-119c76b34833_1 copy 9.png';
+
+// Mock plant data - updated with new plant images
 const mockPlants: Plant[] = [
-  { id: '1', name: 'Quiet Fern', image: '/src/assets/7438a9d659ebf123bfbcca1916fe079babb35132.png', unlocked: true, level: 1 },
-  { id: '2', name: 'Wild Clover', image: '/src/assets/4c899badb6a576e6df75d3cb576969dd9e07298d.png', unlocked: true, level: 2 },
-  { id: '3', name: 'Rose Moss', image: '/src/assets/34ec7cd771dafa77769204ece804cb31dcd57a39.png', unlocked: true, level: 3 },
-  { id: '4', name: 'Blue Sage', image: '/src/assets/blue-sage-new.png', unlocked: true, level: 4 },
+  { id: '1', name: 'Pixel Sprout', image: plant1, unlocked: true, level: 1 },
+  { id: '2', name: 'Green Buddy', image: plant2, unlocked: true, level: 2 },
+  { id: '3', name: 'Leaf Friend', image: plant3, unlocked: true, level: 3 },
+  { id: '4', name: 'Tiny Succulent', image: plant4, unlocked: true, level: 4 },
+  { id: '5', name: 'Mini Cactus', image: plant5, unlocked: true, level: 5 },
+  { id: '6', name: 'Pixel Fern', image: plant6, unlocked: true, level: 6 },
+  { id: '7', name: 'Garden Gem', image: plant7, unlocked: true, level: 7 },
+  { id: '8', name: 'Succulent 1', image: plant8, unlocked: true, level: 8 },
+  { id: '9', name: 'Succulent 2', image: plant9, unlocked: true, level: 9 },
+  { id: '10', name: 'Succulent 3', image: plant10, unlocked: true, level: 10 },
+  { id: '11', name: 'Succulent 4', image: plant11, unlocked: true, level: 11 },
+  { id: '12', name: 'Succulent 5', image: plant12, unlocked: true, level: 12 },
+  { id: '13', name: 'Succulent 6', image: plant13, unlocked: true, level: 13 },
+  { id: '14', name: 'Succulent 7', image: plant14, unlocked: true, level: 14 },
+  { id: '15', name: 'Succulent 8', image: plant15, unlocked: true, level: 15 },
+  { id: '16', name: 'Succulent 9', image: plant16, unlocked: true, level: 16 },
 ];
 
 interface DecorativePlantProps {

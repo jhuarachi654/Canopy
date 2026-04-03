@@ -5,10 +5,10 @@ import type { Todo, JournalEntry } from '../App';
 import JournalEntryDetailView from './JournalEntryDetailView';
 
 // Import all plant images
-import quietFernImg from 'figma:asset/7438a9d659ebf123bfbcca1916fe079babb35132.png';
-import wildCloverImg from 'figma:asset/4c899badb6a576e6df75d3cb576969dd9e07298d.png';
-import roseMossImg from 'figma:asset/34ec7cd771dafa77769204ece804cb31dcd57a39.png';
-import blueSageImg from '../assets/blue-sage-new.png';
+import plant1 from '../assets/plants/1- plant.png';
+import plant2 from '../assets/plants/Plant 2.png';
+import plant3 from '../assets/plants/Plant 3.png';
+import plant4 from '../assets/plants/grehrehr 6.png';
 
 // Import pixelated grass background
 import grassTexture from 'figma:asset/efb1d6fe14114965e2db541fd29beb0dca2527d6.png';
@@ -68,23 +68,23 @@ export default function GameScreen({
   const plants = {
     'quiet-fern': {
       name: 'Quiet Fern',
-      image: quietFernImg,
+      image: plant1,
       unlockLevel: 1,
     },
     'wild-clover': {
       name: 'Wild Clover',
-      image: wildCloverImg,
+      image: plant2,
       unlockLevel: 5,
     },
     'rose-moss': {
       name: 'Rose Moss',
-      image: roseMossImg,
+      image: plant3,
       unlockLevel: 10,
     },
     'blue-sage': {
       name: 'Blue Sage',
-      image: blueSageImg,
-      unlockLevel: 4,
+      image: plant4,
+      unlockLevel: 15,
     },
   };
 

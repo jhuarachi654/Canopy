@@ -34,6 +34,7 @@ export default function TodoListScreen({
   onOpenFocusTask,
 }: TodoListScreenProps) {
   const prefersReducedMotion = useReducedMotion();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const visibleTodos = todos.filter((todo) => !todo.destroyedAt);
   const [activeFilter, setActiveFilter] = useState<'todo' | 'completed'>('todo');
   const [newTodoText, setNewTodoText] = useState('');
@@ -255,6 +256,27 @@ export default function TodoListScreen({
       setFocusSelectionIds(rankedIncompleteTodos.slice(0, 3).map((t) => t.id));
     }
   }, [focusMode, rankedIncompleteTodos]);
+
+  // Handle mobile keyboard with Visual Viewport API
+  useEffect(() => {
+    if (!window.visualViewport) return;
+
+    const handleViewportChange = () => {
+      const viewport = window.visualViewport;
+      const heightDiff = window.innerHeight - viewport.height;
+      setKeyboardHeight(heightDiff > 150 ? heightDiff : 0); // Only count as keyboard if significant height
+    };
+
+    // Initial check
+    handleViewportChange();
+
+    // Listen for viewport changes (keyboard open/close)
+    window.visualViewport.addEventListener('resize', handleViewportChange);
+    
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleViewportChange);
+    };
+  }, []);
 
   const focusSelectedSet = new Set(focusSelectionIds);
   const focusModeLimitedTodos = focusMode
@@ -708,7 +730,8 @@ export default function TodoListScreen({
                     onClick={closeTaskSheet}
                   />
                   <motion.div
-                    className="fixed inset-x-0 bottom-0 z-[220] max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-t-[24px] bg-[var(--surface-base)] px-[var(--space-5)] pb-[calc(var(--space-6)+env(safe-area-inset-bottom))] pt-[var(--space-3)]"
+                    className="fixed inset-x-0 bottom-0 z-[220] max-h-[calc(100dvh-3rem)] overflow-y-auto rounded-t-[24px] bg-[var(--surface-base)] px-[var(--space-5)] transition-all duration-300 ease-out pt-[var(--space-3)]"
+                    style={{ paddingBottom: `${Math.max(24, keyboardHeight + 16)}px` }}
                     initial={{ y: '100%' }}
                     animate={{ y: 0 }}
                     exit={{ y: '100%' }}

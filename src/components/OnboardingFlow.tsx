@@ -21,6 +21,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
   const [selectedPlant, setSelectedPlant] = useState('quiet-fern');
   const [isLoading, setIsLoading] = useState(false);
   const [keyboardHeight, setKeyboardHeight] = useState(0);
+  const [bottomPadding, setBottomPadding] = useState(32);
 
   // Handle mobile keyboard with Visual Viewport API
   useEffect(() => {
@@ -376,8 +377,8 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
           </div>
         </div>
 
-        {/* CTA Button - Fixed to bottom */}
-        <div className="shrink-0 px-[var(--space-6)] sm:px-[var(--space-10)]" style={{ paddingBottom: '32px' }}>
+        {/* CTA Button - Fixed to bottom with keyboard awareness */}
+        <div className="shrink-0 px-[var(--space-6)] sm:px-[var(--space-10)] transition-all duration-300 ease-out" style={{ paddingBottom: `${Math.max(32, keyboardHeight + 16)}px` }}>
           {/* Step 1: Name */}
           {currentStep === 0 && (
             <button

@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence, useReducedMotion } from 'motion/react';
-import { ChevronRight, RefreshCw, ImagePlus, Camera, Image, X } from 'lucide-react';
+import { ChevronRight, RefreshCw, ImagePlus, Camera, Image, X, Edit } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Todo, JournalEntry } from '../App';
 
@@ -50,6 +50,7 @@ export default function JournalScreen({
   onUpdateEntry
 }: JournalScreenProps) {
   const prefersReducedMotion = useReducedMotion();
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
   const [activeTab, setActiveTab] = useState<'today' | 'archive'>('today');
   const [currentPromptIndex, setCurrentPromptIndex] = useState(0);
   const [response, setResponse] = useState('');
@@ -60,6 +61,8 @@ export default function JournalScreen({
   const [showPhotoMenu, setShowPhotoMenu] = useState(false);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+  const [inlineEditingResponse, setInlineEditingResponse] = useState('');
+  const [inlineEditingPhotos, setInlineEditingPhotos] = useState<string[]>([]);
 
   // Close photo menu when clicking outside
   React.useEffect(() => {
@@ -75,6 +78,27 @@ export default function JournalScreen({
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [showPhotoMenu]);
+
+  // Handle mobile keyboard with Visual Viewport API
+  useEffect(() => {
+    if (!window.visualViewport) return;
+
+    const handleViewportChange = () => {
+      const viewport = window.visualViewport;
+      const heightDiff = window.innerHeight - viewport.height;
+      setKeyboardHeight(heightDiff > 150 ? heightDiff : 0); // Only count as keyboard if significant height
+    };
+
+    // Initial check
+    handleViewportChange();
+
+    // Listen for viewport changes (keyboard open/close)
+    window.visualViewport.addEventListener('resize', handleViewportChange);
+    
+    return () => {
+      window.visualViewport?.removeEventListener('resize', handleViewportChange);
+    };
+  }, []);
 
   // Get today's date string for comparison
   const getTodayDateString = () => {
@@ -99,14 +123,25 @@ export default function JournalScreen({
 
   // Handle photo upload (mock for now - just preview)
   const handlePhotoSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file && photoPreview.length < 3) {
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setPhotoPreview([...photoPreview, reader.result as string]);
-        setShowPhotoMenu(false);
-      };
-      reader.readAsDataURL(file);
+    const files = e.target.files;
+    if (files) {
+      const newPhotos: string[] = [];
+      Array.from(files).forEach((file: File) => {
+        if (photoPreview.length + newPhotos.length < 3) {
+          const reader = new FileReader();
+          reader.onloadend = () => {
+            const result = reader.result;
+            if (typeof result === 'string') {
+              newPhotos.push(result);
+              if (newPhotos.length === Math.min(files.length, 3 - photoPreview.length)) {
+                setPhotoPreview([...photoPreview, ...newPhotos]);
+                setShowPhotoMenu(false);
+              }
+            }
+          };
+          reader.readAsDataURL(file);
+        }
+      });
     }
   };
 
@@ -120,14 +155,14 @@ export default function JournalScreen({
     if (!response.trim()) return;
 
     const prompt = DAILY_PROMPTS[currentPromptIndex];
-    onAddEntry(prompt, response.trim(), false, undefined, photoPreview[0] || undefined);
-    
-    // Reset scroll position after saving
-    window.scrollTo(0, 0);
+    onAddEntry(prompt, response.trim(), false, undefined, photoPreview.length > 0 ? photoPreview.join(',') : undefined);
     
     setResponse('');
     setPhotoPreview([]);
     setShowMoodSelector(true);
+    
+    // Automatically change to a new prompt after submission
+    shufflePrompt();
     
     // Hide mood selector after 3 seconds
     setTimeout(() => {
@@ -187,19 +222,34 @@ export default function JournalScreen({
 
   // Handle edit entry
   const handleEditEntry = (entry: JournalEntry) => {
-    setIsEditing(true);
     setEditingEntryId(entry.id);
-    setResponse(entry.response);
+    setInlineEditingResponse(entry.response);
     if (entry.photoUrl) {
-      setPhotoPreview([entry.photoUrl]);
+      const photos = entry.photoUrl.split(',').filter(photo => photo.trim());
+      setInlineEditingPhotos(photos);
+    } else {
+      setInlineEditingPhotos([]);
     }
-    // Find the prompt index
-    const promptIndex = DAILY_PROMPTS.indexOf(entry.prompt || '');
-    if (promptIndex !== -1) {
-      setCurrentPromptIndex(promptIndex);
-    }
-    // Scroll to top
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Handle inline save
+  const handleInlineSave = () => {
+    if (!inlineEditingResponse.trim() || !editingEntryId) return;
+    
+    const photoString = inlineEditingPhotos.length > 0 ? inlineEditingPhotos.join(',') : undefined;
+    onUpdateEntry(editingEntryId, inlineEditingResponse.trim(), photoString);
+    
+    // Reset inline editing state
+    setEditingEntryId(null);
+    setInlineEditingResponse('');
+    setInlineEditingPhotos([]);
+  };
+
+  // Handle inline cancel
+  const handleInlineCancel = () => {
+    setEditingEntryId(null);
+    setInlineEditingResponse('');
+    setInlineEditingPhotos([]);
   };
 
   // Handle update
@@ -233,7 +283,7 @@ export default function JournalScreen({
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
   return (
-    <div className="flex flex-col h-full" style={{ minHeight: '100dvh' }}>
+    <div className="flex flex-col">
       {/* Header - pinned to top */}
       <div className="shrink-0 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-4">
         <h2 className="type-label mb-3 uppercase tracking-widest text-gray-400">TODAY'S REFLECTION</h2>
@@ -242,8 +292,8 @@ export default function JournalScreen({
       </div>
 
       {/* Middle content - flexible space that absorbs keyboard */}
-      <div className="flex-1 overflow-hidden">
-        <div className="custom-scrollbar h-full overflow-y-auto overscroll-y-contain px-4">
+      <div className="flex flex-col">
+        <div className="custom-scrollbar overflow-y-auto overscroll-y-contain px-4 py-8 transition-all duration-300 ease-out" style={{ paddingBottom: `${Math.max(128, keyboardHeight + 32)}px` }}>
           {/* Prompt Card */}
           <div className="mb-5 rounded-2xl bg-white px-5 pb-5 pt-5 shadow-sm">
             {/* Editing indicator */}
@@ -286,12 +336,24 @@ export default function JournalScreen({
           </div>
 
           {/* Photo preview if exists */}
-          {photoPreview.length > 0 && (
+          {photoPreview.filter(photo => {
+            return photo && 
+                   photo.trim() && 
+                   photo !== 'data:image/png;base64,' &&
+                   photo !== 'data:image/png;base64' &&
+                   photo.length > 'data:image/png;base64,'.length;
+          }).length > 0 && (
             <div className="flex gap-3 mb-4 flex-wrap">
-              {photoPreview.map((photo, index) => (
+              {photoPreview.filter(photo => {
+                return photo && 
+                       photo.trim() && 
+                       photo !== 'data:image/png;base64,' &&
+                       photo !== 'data:image/png;base64' &&
+                       photo.length > 'data:image/png;base64,'.length;
+              }).map((photo, index) => (
                 <div 
                   key={index}
-                  className="relative bg-white p-2 shadow-lg"
+                  className="relative group bg-white p-2 shadow-lg"
                   style={{
                     width: '100px',
                     paddingBottom: '12px',
@@ -302,7 +364,7 @@ export default function JournalScreen({
                     <img
                       src={photo}
                       alt={`Photo ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                   </div>
                   
@@ -313,7 +375,7 @@ export default function JournalScreen({
                       const newPreview = photoPreview.filter((_, i) => i !== index);
                       setPhotoPreview(newPreview);
                     }}
-                    className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-red-500 text-white transition-colors hover:bg-red-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-red-500 focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                    className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--text-strong-alt)] text-white transition-all duration-200 opacity-0 group-hover:opacity-100 hover:bg-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                   >
                     <X className="h-3 w-3" />
                   </button>
@@ -321,278 +383,378 @@ export default function JournalScreen({
               ))}
             </div>
           )}
-        </div>
-      </div>
 
-      {/* Bottom input section - pinned to bottom for keyboard */}
-      <div className="shrink-0 bg-white border-t border-gray-100 px-4 pb-[max(env(safe-area-inset-bottom),var(--space-4))] pt-4">
-        {/* Text area */}
-        <textarea
-          value={response}
-          onChange={(e) => setResponse(e.target.value)}
-          placeholder="Answer here..."
-          aria-label="Journal response"
-          className="type-body min-h-[116px] w-full resize-none rounded-xl border border-[var(--accent-soft-border-2)] bg-[var(--surface-base)] p-4 text-[var(--text-strong-alt)] placeholder:text-[var(--text-caption-4)] focus:border-[var(--accent-pill)] focus:outline-none focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-journal)]"
-        />
+          {/* Text area */}
+          <textarea
+            value={response}
+            onChange={(e) => setResponse(e.target.value)}
+            placeholder="Answer here..."
+            aria-label="Journal response"
+            className="type-body min-h-[116px] w-full resize-none rounded-xl border border-[var(--accent-soft-border-2)] bg-[var(--surface-base)] p-4 text-[var(--text-strong-alt)] placeholder:text-[var(--text-caption-4)] focus:border-[var(--accent-pill)] focus:outline-none focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-journal)]"
+          />
 
-        {/* Bottom actions */}
-        <div className="mt-3 flex items-center justify-between">
-          {/* Photo upload with menu */}
-          <div className="relative photo-menu-container">
-            <button
-              type="button"
-              onClick={() => setShowPhotoMenu(!showPhotoMenu)}
-              disabled={photoPreview.length >= 3}
-              className={`flex items-center gap-2 transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
-                photoPreview.length >= 3 
-                  ? 'text-gray-300' 
-                  : 'cursor-pointer text-gray-400 hover:text-[var(--text-body-muted)]'
-              }`}
-            >
-              <ImagePlus className="w-5 h-5" />
-              <span className="type-caption">
-                {photoPreview.length === 0 ? 'Add a photo' : `Add photo (${photoPreview.length}/3)`}
-              </span>
-            </button>
-
-            {/* Photo options menu */}
-            <AnimatePresence>
-              {showPhotoMenu && photoPreview.length < 3 && (
-                <motion.div
-                  initial={{ opacity: 0, y: -10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -10 }}
-                  className="absolute bottom-full left-0 z-10 mb-2 overflow-hidden rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-base)] shadow-lg"
-                >
-                  {/* Camera option */}
-                  <label className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--surface-hover-panel-muted)]">
-                    <Camera className="h-5 w-5 text-[var(--text-caption-2)]" />
-                    <span className="type-caption text-[var(--text-strong-alt)]">Take photo</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      capture="environment"
-                      onChange={(e) => handlePhotoSelect(e)}
-                      className="hidden"
-                    />
-                  </label>
-                  {/* Gallery option */}
-                  <label className="flex cursor-pointer items-center gap-3 border-t border-[var(--border-soft)] px-4 py-3 transition-colors hover:bg-[var(--surface-hover-panel-muted)]">
-                    <Image className="h-5 w-5 text-[var(--text-caption-2)]" />
-                    <span className="type-caption text-[var(--text-strong-alt)]">Choose from gallery</span>
-                    <input
-                      type="file"
-                      accept="image/*"
-                      onChange={(e) => handlePhotoSelect(e)}
-                      className="hidden"
-                    />
-                  </label>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-
-          {/* Save/Update buttons */}
-          {isEditing ? (
-            <div className="flex gap-2">
+          {/* Bottom actions */}
+          <div className="mt-3 flex items-center justify-between">
+            {/* Photo upload with menu */}
+            <div className="relative photo-menu-container">
               <button
                 type="button"
-                onClick={handleCancelEdit}
-                className="type-body rounded-full bg-[var(--surface-panel-track-disabled)] px-6 py-3 text-[var(--text-body-muted)] transition-all duration-150 ease-out hover:bg-[var(--surface-panel-track-neutral)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+                onClick={() => setShowPhotoMenu(!showPhotoMenu)}
+                disabled={photoPreview.length >= 3}
+                className={`flex items-center gap-2 transition-all duration-150 ease-out focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40 ${
+                  photoPreview.length >= 3 
+                    ? 'text-gray-300' 
+                    : 'cursor-pointer text-gray-400 hover:text-[var(--text-body-muted)]'
+                }`}
               >
-                Cancel
+                <ImagePlus className="w-5 h-5" />
+                <span className="type-caption">
+                  {photoPreview.length === 0 ? 'Add a photo' : `Add photo (${photoPreview.length}/3)`}
+                </span>
               </button>
-              <button
+
+              {/* Photo options menu */}
+              <AnimatePresence>
+                {showPhotoMenu && photoPreview.length < 3 && (
+                  <motion.div
+                    initial={{ opacity: 0, y: -10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="absolute bottom-full left-0 z-10 mb-2 overflow-hidden rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-base)] shadow-lg"
+                  >
+                    {/* Camera option */}
+                    <label className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--surface-hover-panel-muted)] whitespace-nowrap">
+                      <Camera className="h-5 w-5 text-[var(--text-caption-2)]" />
+                      <span className="type-caption text-[var(--text-strong-alt)]">Take photo</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        multiple
+                        onChange={(e) => handlePhotoSelect(e)}
+                        className="hidden"
+                      />
+                    </label>
+                    {/* Gallery option */}
+                    <label className="flex cursor-pointer items-center gap-3 border-t border-[var(--border-soft)] px-4 py-3 transition-colors hover:bg-[var(--surface-hover-panel-muted)] whitespace-nowrap">
+                      <Image className="h-5 w-5 text-[var(--text-caption-2)]" />
+                      <span className="type-caption text-[var(--text-strong-alt)]">Choose from gallery</span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        onChange={(e) => handlePhotoSelect(e)}
+                        className="hidden"
+                      />
+                    </label>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Save/Update buttons */}
+            {isEditing ? (
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={handleCancelEdit}
+                  className="type-body rounded-full bg-[var(--surface-panel-track-disabled)] px-6 py-3 text-[var(--text-body-muted)] transition-all duration-150 ease-out hover:bg-[var(--surface-panel-track-neutral)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpdate}
+                  disabled={!response.trim()}
+                  className="type-body rounded-full bg-[var(--accent-teal)] px-8 py-3 text-white transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+                >
+                  Update
+                </button>
+              </div>
+            ) : (
+              <motion.button
                 type="button"
-                onClick={handleUpdate}
+                onClick={handleSave}
                 disabled={!response.trim()}
                 className="type-body rounded-full bg-[var(--accent-teal)] px-8 py-3 text-white transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                Update
-              </button>
-            </div>
-          ) : (
-            <motion.button
-              type="button"
-              onClick={handleSave}
-              disabled={!response.trim()}
-              className="type-body rounded-full bg-[var(--accent-teal)] px-8 py-3 text-white transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
-              animate={
-                !response.trim()
+                animate={
+                  !response.trim()
                     ? { scale: 1 }
                     : prefersReducedMotion
                       ? { opacity: 1 }
                       : { scale: [1, 1.03, 1] }
                 }
-              transition={{ duration: 0.32, repeat: !response.trim() || prefersReducedMotion ? 0 : Infinity, repeatDelay: 2.2 }}
-              whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
-            >
+                transition={{ duration: 0.32, repeat: !response.trim() || prefersReducedMotion ? 0 : Infinity, repeatDelay: 2.2 }}
+                whileTap={prefersReducedMotion ? {} : { scale: 0.97 }}
+              >
                 Save
               </motion.button>
             )}
           </div>
         </div>
 
-        {/* Scroll hint */}
-        {todayEntry && (
-          <div className="type-caption mb-6 text-center text-gray-400">
-            scroll to see past entries
-          </div>
-        )}
-
-        {/* Saved Today Section */}
-        {todayEntry && (
-          <div className="mb-4">
-            <h3 className="type-label mb-4 uppercase tracking-widest text-gray-400">Saved Today</h3>
-            
-            <motion.div 
-              className="rounded-2xl bg-white p-4 shadow-sm"
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <div className="flex items-start justify-between mb-3">
-                <span className="type-caption text-gray-400">
-                  {new Date(todayEntry.createdAt).toLocaleTimeString('en-US', {
-                    hour: 'numeric',
-                    minute: '2-digit',
-                  })}
-                </span>
-                <button 
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleEditEntry(todayEntry);
-                  }}
-                  className="type-caption text-[var(--accent-teal)] transition-all duration-150 ease-out hover:text-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-35)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
-                >
-                  Edit entry
-                </button>
-              </div>
-              
-              {/* Show the prompt if it exists */}
-              {todayEntry.prompt && (
-                <p className="type-body mb-3 italic text-[var(--text-caption-2)]">
-                  {todayEntry.prompt}
-                </p>
-              )}
-              
-              {/* Show the response */}
-              <p className="type-body mb-4 whitespace-pre-wrap text-[var(--text-strong-alt)]">
-                {todayEntry.response}
-              </p>
-              
-              {/* Show photo if exists */}
-              {todayEntry.photoUrl && (
-                <div className="mt-4">
-                  <div 
-                    className="relative bg-white p-3 shadow-lg inline-block"
-                    style={{
-                      maxWidth: '200px',
-                    }}
-                  >
-                    {/* Polaroid photo */}
-                    <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
-                      <img
-                        src={todayEntry.photoUrl}
-                        alt="Journal entry photo"
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  </div>
-                </div>
-              )}
-            </motion.div>
-          </div>
-        )}
-
-        {/* Archive entries (if any older entries exist) */}
-        {journalEntries.filter(e => {
-          const entryDate = new Date(e.createdAt).toISOString().split('T')[0];
-          return entryDate !== getTodayDateString() && !e.isWeeklyPrompt;
-        }).length > 0 && (
-          <div>
-            <h3 className="type-label mb-4 uppercase tracking-widest text-gray-400">Past Entries</h3>
-            
-            <div className="space-y-3">
-              {journalEntries
-                .filter(e => {
-                  const entryDate = new Date(e.createdAt).toISOString().split('T')[0];
-                  return entryDate !== getTodayDateString() && !e.isWeeklyPrompt;
-                })
-                .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-                .map(entry => {
-                  const isExpanded = expandedEntries.has(entry.id);
-                  
-                  return (
-                    <motion.div 
-                      key={entry.id} 
-                      className="bg-white rounded-3xl shadow-sm p-6 cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => toggleEntry(entry.id)}
-                      whileHover={{ y: -2 }}
-                      transition={{ type: "spring", stiffness: 300 }}
+          
+          {/* Past entries */}
+          <div className="space-y-4">
+            <AnimatePresence>
+              {sortedEntries.map((entry, index) => (
+                <motion.div
+                  key={entry.id}
+                  initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -20 }}
+                  transition={{ duration: 0.3, delay: index * 0.05 }}
+                  className="rounded-2xl bg-white px-5 py-4 shadow-sm group relative"
+                style={{
+                  border: editingEntryId === entry.id ? '2px solid var(--accent-teal)' : 'none'
+                }}
+              >
+                {/* Edit/Save/Cancel buttons */}
+                {editingEntryId === entry.id ? (
+                  <div className="absolute top-4 right-4 flex gap-2">
+                    <button
+                      onClick={handleInlineSave}
+                      className="text-[var(--accent-teal)] hover:text-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                      aria-label="Save entry"
                     >
-                      <div className="flex items-start justify-between mb-3">
-                        <span className="type-caption text-gray-400">
-                          {new Date(entry.createdAt).toLocaleDateString('en-US', {
-                            month: 'long',
-                            day: 'numeric',
-                            year: 'numeric',
-                          })}
-                        </span>
-                        <motion.div
-                          animate={{ rotate: isExpanded ? 90 : 0 }}
-                          transition={{ duration: 0.2 }}
-                        >
-                          <ChevronRight className="w-5 h-5 text-gray-400" />
-                        </motion.div>
-                      </div>
-                      
-                      {/* Show the prompt if it exists */}
-                      {entry.prompt && (
-                        <p className="type-body mb-2 italic text-[var(--text-caption-2)]">
-                          {entry.prompt}
-                        </p>
-                      )}
-                      
-                      {/* Show the response - truncated or full based on expanded state */}
-                      <p className={`type-body whitespace-pre-wrap text-[var(--text-strong-alt)] ${!isExpanded ? 'line-clamp-2' : ''}`}>
-                        {entry.response}
-                      </p>
-                      
-                      {/* Show photo if exists and expanded */}
-                      <AnimatePresence>
-                        {isExpanded && entry.photoUrl && (
-                          <motion.div 
-                            className="mt-4"
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: 'auto' }}
-                            exit={{ opacity: 0, height: 0 }}
-                            transition={{ duration: 0.2 }}
-                          >
+                      <svg className="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={handleInlineCancel}
+                      className="text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                      aria-label="Cancel editing"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      console.log('Edit button clicked!');
+                      handleEditEntry(entry);
+                    }}
+                    className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-white cursor-pointer"
+                    aria-label="Edit entry"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                )}
+                  
+                  <div className="mb-2 text-xs text-gray-400">
+                    {new Date(entry.createdAt).toLocaleDateString('en-US', {
+                      weekday: 'short',
+                      month: 'short',
+                      day: 'numeric',
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </div>
+                  {entry.prompt && (
+                    <p className="mb-2 text-left text-[var(--text-strong)] [font-family:var(--font-family-display)] [font-size:1rem] [font-weight:var(--type-headline-weight)] [line-height:1.2]">
+                      {entry.prompt}
+                    </p>
+                  )}
+                  
+                  {/* Response - either display or edit */}
+                  {editingEntryId === entry.id ? (
+                    <textarea
+                      value={inlineEditingResponse}
+                      onChange={(e) => setInlineEditingResponse(e.target.value)}
+                      className="w-full min-h-[100px] rounded-lg border border-gray-300 px-3 py-2 text-sm text-[var(--text-strong-alt)] focus:border-[var(--accent-teal)] focus:outline-none focus:ring-1 focus:ring-[var(--accent-teal)]"
+                      placeholder="Edit your response..."
+                    />
+                  ) : (
+                    <p className="text-sm text-[var(--text-strong-alt)] whitespace-pre-wrap">{entry.response}</p>
+                  )}
+                  
+                  {/* Photos - either display or edit */}
+                  {editingEntryId === entry.id ? (
+                    <div className="mt-3">
+                      {/* Current photos with remove buttons */}
+                      {inlineEditingPhotos.filter(photo => {
+                        return photo && 
+                               photo.trim() && 
+                               photo !== 'data:image/png;base64,' &&
+                               photo !== 'data:image/png;base64' &&
+                               photo.length > 'data:image/png;base64,'.length;
+                      }).length > 0 && (
+                        <div className="flex gap-3 mb-3 flex-wrap">
+                          {inlineEditingPhotos.filter(photo => {
+                            return photo && 
+                                   photo.trim() && 
+                                   photo !== 'data:image/png;base64,' &&
+                                   photo !== 'data:image/png;base64' &&
+                                   photo.length > 'data:image/png;base64,'.length;
+                          }).map((photo, index) => (
                             <div 
-                              className="relative bg-white p-3 shadow-lg inline-block"
+                              key={index}
+                              className="relative group bg-white p-2 shadow-lg"
                               style={{
-                                maxWidth: '200px',
+                                width: '100px',
+                                paddingBottom: '12px',
                               }}
                             >
                               {/* Polaroid photo */}
                               <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
                                 <img
-                                  src={entry.photoUrl}
-                                  alt="Journal entry photo"
-                                  className="w-full h-full object-cover"
+                                  src={photo}
+                                  alt={`Photo ${index + 1}`}
+                                  className="w-full h-full object-contain"
+                                />
+                              </div>
+                              
+                              {/* Remove button */}
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newPhotos = inlineEditingPhotos.filter((_, i) => i !== index);
+                                  setInlineEditingPhotos(newPhotos);
+                                }}
+                                className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--text-strong-alt)] text-white transition-all duration-200 opacity-0 group-hover:opacity-100 hover:bg-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Add photo button */}
+                      {inlineEditingPhotos.length < 3 && (
+                        <div className="photo-menu-container relative">
+                          <button
+                            type="button"
+                            onClick={() => setShowPhotoMenu(!showPhotoMenu)}
+                            className="flex items-center gap-2 rounded-lg border border-dashed border-gray-300 px-4 py-2 text-sm text-gray-500 hover:border-gray-400 hover:text-gray-600"
+                          >
+                            <ImagePlus className="h-4 w-4" />
+                            Add Photo
+                          </button>
+                          
+                          {/* Photo menu */}
+                          {showPhotoMenu && (
+                            <motion.div
+                              initial={{ opacity: 0, y: -10 }}
+                              animate={{ opacity: 1, y: 0 }}
+                              exit={{ opacity: 0, y: -10 }}
+                              className="absolute bottom-full left-0 z-10 mb-2 overflow-hidden rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-base)] shadow-lg"
+                            >
+                              {/* Camera option */}
+                              <label className="flex cursor-pointer items-center gap-3 px-4 py-3 transition-colors hover:bg-[var(--surface-hover-panel-muted)] whitespace-nowrap">
+                                <Camera className="h-5 w-5 text-[var(--text-caption-2)]" />
+                                <span className="type-caption text-[var(--text-strong-alt)]">Take photo</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  capture="environment"
+                                  multiple
+                                  onChange={(e) => {
+                                    const files = e.target.files;
+                                    if (files) {
+                                      const newPhotos: string[] = [];
+                                      Array.from(files).forEach((file: File) => {
+                                        if (inlineEditingPhotos.length + newPhotos.length < 3) {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => {
+                                            const result = reader.result;
+                                            if (typeof result === 'string') {
+                                              newPhotos.push(result);
+                                              if (newPhotos.length === Math.min(files.length, 3 - inlineEditingPhotos.length)) {
+                                                setInlineEditingPhotos([...inlineEditingPhotos, ...newPhotos]);
+                                                setShowPhotoMenu(false);
+                                              }
+                                            }
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      });
+                                    }
+                                  }}
+                                  className="hidden"
+                                />
+                              </label>
+                              {/* Gallery option */}
+                              <label className="flex cursor-pointer items-center gap-3 border-t border-[var(--border-soft)] px-4 py-3 transition-colors hover:bg-[var(--surface-hover-panel-muted)] whitespace-nowrap">
+                                <Image className="h-5 w-5 text-[var(--text-caption-2)]" />
+                                <span className="type-caption text-[var(--text-strong-alt)]">Choose from gallery</span>
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  multiple
+                                  onChange={(e) => {
+                                    const files = e.target.files;
+                                    if (files) {
+                                      const newPhotos: string[] = [];
+                                      Array.from(files).forEach((file: File) => {
+                                        if (inlineEditingPhotos.length + newPhotos.length < 3) {
+                                          const reader = new FileReader();
+                                          reader.onloadend = () => {
+                                            const result = reader.result;
+                                            if (typeof result === 'string') {
+                                              newPhotos.push(result);
+                                              if (newPhotos.length === Math.min(files.length, 3 - inlineEditingPhotos.length)) {
+                                                setInlineEditingPhotos([...inlineEditingPhotos, ...newPhotos]);
+                                                setShowPhotoMenu(false);
+                                              }
+                                            }
+                                          };
+                                          reader.readAsDataURL(file);
+                                        }
+                                      });
+                                    }
+                                  }}
+                                  className="hidden"
+                                />
+                              </label>
+                            </motion.div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    entry.photoUrl && (
+                      <div className="mt-3 flex gap-3 flex-wrap">
+                        {entry.photoUrl.split(',').filter(photo => {
+                          return photo && 
+                                 photo.trim() && 
+                                 photo !== 'data:image/png;base64,' &&
+                                 photo !== 'data:image/png;base64' &&
+                                 photo.length > 'data:image/png;base64,'.length;
+                        }).map((photo, photoIndex) => {
+                          const photoSrc = photo.trim();
+                          const finalSrc = photoSrc.startsWith('data:') ? photoSrc : `data:image/png;base64,${photoSrc}`;
+                          
+                          return (
+                            <div 
+                              key={photoIndex}
+                              className="relative bg-white p-2 shadow-lg"
+                              style={{
+                                width: '100px',
+                                paddingBottom: '12px',
+                              }}
+                            >
+                              <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
+                                <img
+                                  src={finalSrc}
+                                  alt={`Journal photo ${photoIndex + 1}`}
+                                  className="w-full h-full object-contain"
                                 />
                               </div>
                             </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-                    </motion.div>
-                  );
-                })}
-            </div>
+                          );
+                        })}
+                      </div>
+                    )
+                  )}
+                </motion.div>
+              ))}
+            </AnimatePresence>
           </div>
-        )}
+        </div>
       </div>
     </div>
   );

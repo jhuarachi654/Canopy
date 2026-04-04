@@ -833,43 +833,32 @@ export default function JournalScreen({
 
                 {/* Bottom actions */}
                 <div className="mt-3 flex items-center justify-between">
-                  {/* Photo upload with menu */}
-                  <div className="relative photo-menu-container">
+                  {/* Photo upload - simplified for mobile */}
+                  <div className="relative">
                     <button
-                      onClick={() => setShowPhotoMenu(!showPhotoMenu)}
+                      onClick={() => {
+                        // Trigger native file picker
+                        const input = document.createElement('input');
+                        input.type = 'file';
+                        input.accept = 'image/*';
+                        input.onchange = (e) => {
+                          const file = (e.target as HTMLInputElement).files?.[0];
+                          if (file) {
+                            const reader = new FileReader();
+                            reader.onload = (e) => {
+                              const result = e.target?.result as string;
+                              setPhotoPreview([...photoPreview, result]);
+                            };
+                            reader.readAsDataURL(file);
+                          }
+                        };
+                        input.click();
+                      }}
                       className="flex items-center gap-2 text-[var(--text-caption-2)] transition-colors hover:text-[var(--accent-pill)]"
                     >
                       <ImagePlus className="w-4 h-4" />
                       <span className="text-sm">Add photo</span>
                     </button>
-                    
-                    {/* Photo menu dropdown */}
-                    {showPhotoMenu && (
-                      <div className="absolute bottom-full left-0 mb-2 w-48 rounded-lg border border-[var(--border-soft)] bg-white shadow-lg">
-                        <button
-                          onClick={() => {
-                            // Camera functionality
-                            setShowPhotoMenu(false);
-                            // Add camera logic here
-                          }}
-                          className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[var(--text-strong-alt)] transition-colors hover:bg-[var(--surface-hover-soft)]"
-                        >
-                          <Camera className="w-4 h-4" />
-                          Take photo
-                        </button>
-                        <button
-                          onClick={() => {
-                            // Gallery functionality
-                            setShowPhotoMenu(false);
-                            // Add gallery logic here
-                          }}
-                          className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[var(--text-strong-alt)] transition-colors hover:bg-[var(--surface-hover-soft)]"
-                        >
-                          <Image className="w-4 h-4" />
-                          Choose from gallery
-                        </button>
-                      </div>
-                    )}
                   </div>
 
                   {/* Save button */}

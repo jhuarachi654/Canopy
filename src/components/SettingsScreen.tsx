@@ -118,7 +118,7 @@ export default function SettingsScreen({
         <h2 className="mb-6 font-serif text-4xl text-gray-900">Profile</h2>
 
         {/* Profile header */}
-        <div className="mb-4 rounded-3xl border border-[var(--border-soft)] bg-[var(--surface-base-85)] p-6 shadow-sm backdrop-blur-sm">
+        <div className="mb-4 rounded-3xl border border-[var(--border-soft)] p-6 shadow-sm backdrop-blur-sm">
           <div className="flex items-center gap-4">
             <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-[var(--surface-card-subtle-9)]">
               <img 
@@ -137,7 +137,7 @@ export default function SettingsScreen({
         </div>
 
         {/* Settings rows */}
-        <div className="mb-4 overflow-hidden rounded-3xl border border-[var(--border-soft)] bg-[var(--surface-base-85)] shadow-sm backdrop-blur-sm">
+        <div className="mb-4 overflow-hidden rounded-3xl border border-[var(--border-soft)] shadow-sm backdrop-blur-sm">
           {[
             { icon: User, label: 'Edit profile' },
             { icon: Sparkles, label: 'Customize experience' },
@@ -174,7 +174,7 @@ export default function SettingsScreen({
         </div>
 
         {/* Focus mode control */}
-        <div className="mb-4 rounded-3xl border border-[var(--border-soft)] bg-[var(--surface-base-85)] p-5 shadow-sm backdrop-blur-sm">
+        <div className="mb-4 rounded-3xl border border-[var(--border-soft)] p-5 shadow-sm backdrop-blur-sm">
           <div className="flex items-center justify-between">
             <div>
               <p className="text-[var(--text-strong-alt)]">Focus mode</p>
@@ -196,7 +196,7 @@ export default function SettingsScreen({
         </div>
 
         {/* Logout */}
-        <div className="mb-4 rounded-3xl border border-[var(--border-soft)] bg-[var(--surface-base-85)] p-6 shadow-sm backdrop-blur-sm">
+        <div className="mb-4 rounded-3xl border border-[var(--border-soft)] p-6 shadow-sm backdrop-blur-sm">
           <button
             onClick={onLogout}
             className="w-full rounded-full bg-[var(--accent-teal)] py-4 font-medium text-white transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base-85)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"

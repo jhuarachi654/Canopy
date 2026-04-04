@@ -236,7 +236,7 @@ export default function GameScreen({
         
         {/* Plant Card */}
         <motion.div 
-          className="relative mb-4 flex flex-col items-center rounded-2xl border border-[var(--border-soft)] bg-[var(--surface-base-90)] p-4 shadow-sm backdrop-blur-sm"
+          className="relative mb-4 flex flex-col items-center rounded-2xl border border-[var(--border-soft)] p-4 shadow-sm backdrop-blur-sm"
           initial={{ y: 20, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.4, delay: 0.1 }}

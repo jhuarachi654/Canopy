@@ -295,7 +295,7 @@ export default function JournalScreen({
       {/* Content */}
       <div className="px-4 py-6 overflow-y-auto" style={{ maxHeight: '100vh', paddingBottom: `${keyboardHeight + 100}px` }}>
           {/* Prompt Card */}
-          <div className="mb-5 rounded-2xl bg-white px-5 pb-5 pt-5 shadow-sm">
+          <div className={`mb-5 rounded-2xl bg-white px-5 pb-5 pt-5 shadow-sm transition-all duration-300 ${showJournalPopup ? 'opacity-0 scale-95 blur-sm' : 'opacity-100 scale-100 blur-0'}`}>
             {/* Editing indicator */}
             {isEditing && (
               <div className="text-center mb-4">

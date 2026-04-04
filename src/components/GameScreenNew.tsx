@@ -681,30 +681,6 @@ export default function GameScreen({
               );
             })}
           </div>
-          
-          {/* See More button - full width with proper spacing */}
-          {Object.entries(plants).length > 6 && (
-            <div className="mt-[var(--space-3)]">
-              <motion.button
-                onClick={() => setShowAllPlants(!showAllPlants)}
-                initial={{ scale: 0, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                transition={{ 
-                  delay: 1.1,
-                  type: "spring",
-                  stiffness: 200,
-                  damping: 15
-                }}
-                className="type-body h-14 w-full rounded-[var(--radius-full)] border border-[var(--border-soft)] bg-[var(--surface-base-90)] text-[var(--text-strong-alt)] shadow-none transition-all duration-150 ease-out hover:bg-[var(--surface-hover-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.98] cursor-pointer"
-                whileHover={{ 
-                  scale: 1.02,
-                }}
-                whileTap={{ scale: 0.98 }}
-              >
-                More Plants (+{Object.entries(plants).length - 6})
-              </motion.button>
-            </div>
-          )}
         </motion.div>
 
         {/* Garden Reflection Input */}

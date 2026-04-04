@@ -230,7 +230,6 @@ export default function GameScreen({
   return (
     <div className="min-h-screen">
       <div className="px-4 py-6 overflow-y-auto" style={{ height: 'calc(100vh - 2rem)' }}>
-        <h2 className="mb-3 text-xs uppercase tracking-widest text-gray-400">Your Garden</h2>
         <h2 className="mb-0 font-serif text-[2.6rem] leading-tight text-[var(--text-strong-alt)]">Garden</h2>
         <p className="mb-6 mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">Your plant grows as you show up.</p>
         

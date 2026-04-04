@@ -274,7 +274,6 @@ export default function TaskHistoryScreen({
   return (
     <div className="flex flex-col" style={{ height: '100dvh', minHeight: '100dvh' }}>
       <div className="custom-scrollbar flex-1 overflow-y-auto overscroll-y-contain px-4 pb-24 pt-6" style={{ minHeight: 0 }}>
-        <h2 className="mb-3 text-xs uppercase tracking-widest text-[var(--text-body-muted-2)]">YOUR LOG</h2>
         {/* Header */}
         <h2 className="mb-0 mt-1 font-serif text-[2.6rem] leading-none text-gray-900">Log</h2>
         <p className="mb-6 mt-2 text-[14px] font-normal leading-[1.4] text-[var(--text-caption-2)]">Tap a date to revisit your day.</p>

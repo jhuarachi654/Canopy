@@ -341,11 +341,6 @@ export default function GameScreen({
                   </motion.div>
                 )}
               </div>
-              
-              {/* Plant name label at bottom */}
-              <div className="absolute bottom-2 left-1/2 -translate-x-1/2 rounded-full bg-black/50 px-3 py-1 backdrop-blur-sm">
-                <p className="text-white text-xs font-medium">{currentPlant.displayName}</p>
-              </div>
             </div>
           </div>
 

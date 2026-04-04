@@ -357,29 +357,19 @@ export default function TaskHistoryScreen({
                         <>
                           {/* Tasks Section */}
                           {tasks.length > 0 && (
-                            <div className="mb-6">
-                                                            <div className="space-y-3">
+                            <div>
+                              <div className="space-y-3">
                                 {tasks.map(task => {
                                   const isCompleted = !!task.completedAt;
                                   return (
                                     <div key={task.id} className="flex items-start gap-[var(--space-3)] p-[var(--space-3)] rounded-[var(--radius-md)] border border-[var(--border-soft-panel-3)] bg-[var(--surface-base-90)]">
                                       <div className="flex items-center gap-2 mt-1">
-                                        {isCompleted ? (
-                                          <div className="w-4 h-4 rounded-full bg-[var(--accent-teal)]/10 flex items-center justify-center">
-                                            <div className="w-2 h-2 rounded-full bg-[var(--accent-teal)]" />
-                                          </div>
-                                        ) : null}
                                       </div>
                                       <div className="flex-1">
                                         <p className={`text-sm ${isCompleted ? 'line-through text-[var(--text-caption-2)]' : 'text-[var(--text-strong-alt)]'}`}>
                                           {task.text}
                                         </p>
                                         <div className="mt-1">
-                                          {isCompleted ? (
-                                            <span className="inline-flex items-center px-[var(--space-2)] py-[var(--space-1)] rounded-full text-xs font-medium bg-[var(--accent-teal)]/10 text-[var(--accent-teal)]">
-                                              Completed
-                                            </span>
-                                          ) : null}
                                         </div>
                                       </div>
                                     </div>
@@ -513,13 +503,9 @@ export default function TaskHistoryScreen({
                     {/* Tasks */}
                     {tasks.length > 0 && (
                       <div className="mb-[var(--space-2)]">
-                        <p className="mb-2 text-xs font-light uppercase tracking-wider text-[var(--accent-teal)]">Tasks</p>
                         <div className="space-y-2">
                           {tasks.map(task => (
                             <div key={task.id} className="flex items-center gap-[var(--space-3)] text-sm text-[var(--text-strong-alt)]">
-                              <div className="w-4 h-4 rounded-full bg-[var(--accent-teal)]/10 flex items-center justify-center">
-                                <div className="w-2 h-2 rounded-full bg-[var(--accent-teal)]" />
-                              </div>
                               <span className="line-through">{task.text}</span>
                             </div>
                           ))}

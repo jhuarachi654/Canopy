@@ -344,7 +344,7 @@ export default function GameScreen({
           </div>
 
           {/* Plant Name */}
-          <h3 className="mb-1 font-serif text-[1.75rem] italic text-gray-900">
+          <h3 className="mb-1 font-serif text-[2.6rem] leading-tight text-[var(--text-strong-alt)]">
             {plantName}
           </h3>
           

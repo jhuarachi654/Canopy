@@ -1369,7 +1369,7 @@ export default function App() {
   // Show loading screen while checking authentication
   if (isLoading) {
     return (
-      <div className="relative min-h-[100dvh] bg-[#FAFAFA]">
+      <div className="relative min-h-[100dvh] bg-white">
         <CanopyScreenBackground variant="default" />
         <div className="relative z-10 flex min-h-[100dvh] items-center justify-center">
           <div className="w-64 space-y-3">
@@ -1400,7 +1400,7 @@ export default function App() {
 
   return (
     <div
-      className="relative flex flex-col bg-[#FAFAFA]"
+      className="relative flex flex-col bg-white"
       style={{ height: '100dvh', minHeight: '100dvh', overflow: 'hidden' }}
     >
       <CanopyScreenBackground variant={sharedBackgroundVariant} />

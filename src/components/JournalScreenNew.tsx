@@ -809,21 +809,38 @@ export default function JournalScreen({
                 {photoPreview.length > 0 && (
                   <div className="mb-4">
                     <div className="flex flex-wrap gap-2">
-                      {photoPreview.map((photo, index) => (
-                        <div key={index} className="relative">
-                          <img
-                            src={photo}
-                            alt={`Journal photo ${index + 1}`}
-                            className="h-20 w-20 rounded-lg object-cover"
-                          />
+                      {photoPreview.filter(photo => 
+                        photo !== 'data:image/png;base64,' &&
+                        photo !== 'data:image/png;base64' &&
+                        photo.length > 'data:image/png;base64,'.length
+                      ).map((photo, index) => (
+                        <div 
+                          key={index}
+                          className="relative group bg-white p-2 shadow-lg"
+                          style={{
+                            width: '100px',
+                            paddingBottom: '12px',
+                          }}
+                        >
+                          {/* Polaroid photo */}
+                          <div className="relative w-full aspect-square overflow-hidden bg-gray-100">
+                            <img
+                              src={photo}
+                              alt={`Photo ${index + 1}`}
+                              className="w-full h-full object-contain"
+                            />
+                          </div>
+                          
+                          {/* Remove button */}
                           <button
+                            type="button"
                             onClick={() => {
-                                const newPhotos = photoPreview.filter((_, i) => i !== index);
-                                setPhotoPreview(newPhotos);
-                              }}
-                            className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs"
+                              const newPreview = photoPreview.filter((_, i) => i !== index);
+                              setPhotoPreview(newPreview);
+                            }}
+                            className="absolute -top-2 -right-2 flex h-6 w-6 items-center justify-center rounded-full bg-[var(--text-strong-alt)] text-white transition-all duration-200 opacity-0 group-hover:opacity-100 hover:bg-[var(--text-strong)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-white"
                           >
-                            ×
+                            <X className="h-3 w-3" />
                           </button>
                         </div>
                       ))}

@@ -349,11 +349,6 @@ export default function GameScreen({
             {plantName}
           </h3>
           
-          {/* Level Info */}
-          <p className="mb-3 text-sm text-gray-400">
-            Level {playerProgress.level} · Seedling
-          </p>
-
           {/* Progress Bar */}
           <div className="w-full mb-2">
             <div className="flex items-center justify-between text-sm mb-2">

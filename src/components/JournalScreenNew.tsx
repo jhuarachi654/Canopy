@@ -833,8 +833,8 @@ export default function JournalScreen({
 
                 {/* Bottom actions */}
                 <div className="mt-3 flex items-center justify-between">
-                  {/* Photo upload */}
-                  <div className="relative">
+                  {/* Photo upload with menu */}
+                  <div className="relative photo-menu-container">
                     <button
                       onClick={() => setShowPhotoMenu(!showPhotoMenu)}
                       className="flex items-center gap-2 text-[var(--text-caption-2)] transition-colors hover:text-[var(--accent-pill)]"
@@ -842,6 +842,34 @@ export default function JournalScreen({
                       <ImagePlus className="w-4 h-4" />
                       <span className="text-sm">Add photo</span>
                     </button>
+                    
+                    {/* Photo menu dropdown */}
+                    {showPhotoMenu && (
+                      <div className="absolute bottom-full left-0 mb-2 w-48 rounded-lg border border-[var(--border-soft)] bg-white shadow-lg">
+                        <button
+                          onClick={() => {
+                            // Camera functionality
+                            setShowPhotoMenu(false);
+                            // Add camera logic here
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[var(--text-strong-alt)] transition-colors hover:bg-[var(--surface-hover-soft)]"
+                        >
+                          <Camera className="w-4 h-4" />
+                          Take photo
+                        </button>
+                        <button
+                          onClick={() => {
+                            // Gallery functionality
+                            setShowPhotoMenu(false);
+                            // Add gallery logic here
+                          }}
+                          className="flex w-full items-center gap-3 px-4 py-3 text-left text-sm text-[var(--text-strong-alt)] transition-colors hover:bg-[var(--surface-hover-soft)]"
+                        >
+                          <Image className="w-4 h-4" />
+                          Choose from gallery
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {/* Save button */}

@@ -63,6 +63,7 @@ export default function JournalScreen({
   const [isEditing, setIsEditing] = useState(false);
   const [inlineEditingResponse, setInlineEditingResponse] = useState('');
   const [inlineEditingPhotos, setInlineEditingPhotos] = useState<string[]>([]);
+  const [showJournalPopup, setShowJournalPopup] = useState(false);
 
   // Close photo menu when clicking outside
   React.useEffect(() => {
@@ -387,6 +388,7 @@ export default function JournalScreen({
           <textarea
             value={response}
             onChange={(e) => setResponse(e.target.value)}
+            onClick={() => setShowJournalPopup(true)}
             placeholder="Answer here..."
             aria-label="Journal response"
             className="type-body min-h-[116px] w-full resize-none rounded-xl border border-[var(--accent-soft-border-2)] bg-[var(--surface-base)] p-4 text-[var(--text-strong-alt)] placeholder:text-[var(--text-caption-4)] focus:border-[var(--accent-pill)] focus:outline-none focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-journal)]"
@@ -754,6 +756,116 @@ export default function JournalScreen({
             </AnimatePresence>
         </div>
       </div>
+
+      {/* Journal Popup Modal */}
+      <AnimatePresence>
+        {showJournalPopup && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={() => setShowJournalPopup(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="w-full max-w-lg mx-4 max-h-[90vh] overflow-y-auto"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Daily Reflection Card - Copy of existing card */}
+              <div className="mb-5 rounded-2xl bg-white px-5 pb-5 pt-5 shadow-sm">
+                {/* Header */}
+                <div className="relative mb-5 flex items-center justify-center">
+                  <span className="type-caption text-gray-400">Daily Reflection</span>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentPromptIndex((prev) => (prev + 1) % DAILY_PROMPTS.length)}
+                    className="type-caption absolute right-6 flex items-center text-[var(--text-caption-2)] transition-all duration-150 ease-out hover:text-[var(--accent-pill)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-dark-soft)] focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--surface-base)] active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+                    aria-label="Shuffle prompt"
+                  >
+                    <RefreshCw className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+
+                {/* Prompt */}
+                <div className="mb-4 flex min-h-[64px] items-start justify-center">
+                  <h1 className="w-full text-center text-[var(--text-strong)] [font-family:var(--font-family-display)] [font-size:1.375rem] [font-weight:var(--type-headline-weight)] [line-height:1.2]">
+                    {DAILY_PROMPTS[currentPromptIndex]}
+                  </h1>
+                </div>
+
+                {/* Text area */}
+                <textarea
+                  value={response}
+                  onChange={(e) => setResponse(e.target.value)}
+                  placeholder="Answer here..."
+                  aria-label="Journal response"
+                  className="type-body min-h-[116px] w-full resize-none rounded-xl border border-[var(--accent-soft-border-2)] bg-[var(--surface-base)] p-4 text-[var(--text-strong-alt)] placeholder:text-[var(--text-caption-4)] focus:border-[var(--accent-pill)] focus:outline-none focus:ring-2 focus:ring-[color:var(--shadow-focus-ring-journal)]"
+                />
+
+                {/* Photos */}
+                {photoPreview.length > 0 && (
+                  <div className="mb-4">
+                    <div className="flex flex-wrap gap-2">
+                      {photoPreview.map((photo, index) => (
+                        <div key={index} className="relative">
+                          <img
+                            src={photo}
+                            alt={`Journal photo ${index + 1}`}
+                            className="h-20 w-20 rounded-lg object-cover"
+                          />
+                          <button
+                            onClick={() => {
+                                const newPhotos = photoPreview.filter((_, i) => i !== index);
+                                setPhotoPreview(newPhotos);
+                              }}
+                            className="absolute -top-2 -right-2 h-5 w-5 rounded-full bg-red-500 text-white flex items-center justify-center text-xs"
+                          >
+                            ×
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bottom actions */}
+                <div className="mt-3 flex items-center justify-between">
+                  {/* Photo upload */}
+                  <div className="relative">
+                    <button
+                      onClick={() => setShowPhotoMenu(!showPhotoMenu)}
+                      className="flex items-center gap-2 text-[var(--text-caption-2)] transition-colors hover:text-[var(--accent-pill)]"
+                    >
+                      <ImagePlus className="w-4 h-4" />
+                      <span className="text-sm">Add photo</span>
+                    </button>
+                  </div>
+
+                  {/* Save button */}
+                  <button
+                    onClick={() => {
+                      if (response.trim()) {
+                        onAddEntry(DAILY_PROMPTS[currentPromptIndex], response.trim(), false, selectedMood || undefined, photoPreview[0]);
+                        setResponse('');
+                        setPhotoPreview([]);
+                        setSelectedMood(null);
+                        setShowJournalPopup(false);
+                      }
+                    }}
+                    disabled={!response.trim()}
+                    className="rounded-full bg-[var(--accent-teal)] px-4 py-2 text-sm font-medium text-white transition-all duration-150 ease-out hover:bg-[var(--accent-teal-hover)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[color:var(--shadow-focus-ring-accent-40)] focus-visible:ring-offset-2 focus-visible:ring-offset-white active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Save
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }

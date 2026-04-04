@@ -133,7 +133,7 @@ export default function OnboardingFlow({ onComplete }: OnboardingFlowProps) {
               ? 'onboarding-question'
               : currentStep === 2
                 ? 'onboarding-focus'
-                : 'onboarding-plant'
+                : 'onboarding-focus'
         }
       />
 

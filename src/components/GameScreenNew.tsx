@@ -228,7 +228,7 @@ export default function GameScreen({
   const yearGardenDays = generateYearGarden();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
+    <div className="min-h-screen">
       <div className="px-4 py-6 overflow-y-auto" style={{ height: 'calc(100vh - 2rem)' }}>
         <h2 className="mb-3 text-xs uppercase tracking-widest text-gray-400">Your Garden</h2>
         <h2 className="mb-0 font-serif text-[2.6rem] leading-tight text-[var(--text-strong-alt)]">Garden</h2>

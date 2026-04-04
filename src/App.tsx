@@ -170,10 +170,7 @@ export default function App() {
     animationType: 'sparkles',
   });
 
-  const sharedBackgroundVariant =
-    activeScreen === 'journal'
-      ? 'journal'
-      : 'default';
+  const sharedBackgroundVariant = 'default';
 
   const supabase = getSupabaseClient();
   const hasInitializedProgressPersistence = useRef(false);

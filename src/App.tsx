@@ -171,11 +171,9 @@ export default function App() {
   });
 
   const sharedBackgroundVariant =
-    activeScreen === 'game'
-      ? 'garden'
-      : activeScreen === 'journal'
-        ? 'journal'
-        : 'default';
+    activeScreen === 'journal'
+      ? 'journal'
+      : 'default';
 
   const supabase = getSupabaseClient();
   const hasInitializedProgressPersistence = useRef(false);
@@ -985,7 +983,7 @@ export default function App() {
       if (newLevel > prev.level) {
         const levelConfigItem = levelConfig.find(config => config.level === newLevel);
         if (levelConfigItem) {
-          import('sonner@2.0.3').then(({ toast }) => {
+          import('sonner').then(({ toast }) => {
             setTimeout(() => {
               toast.success(
                 `${levelConfigItem.emoji} LEVEL UP! You're now a ${levelConfigItem.title}! ${levelConfigItem.emoji}\n\n${levelConfigItem.reward}`,
@@ -1177,7 +1175,7 @@ export default function App() {
     await saveProgress(resetProgress);
     
     // Show confirmation toast
-    import('sonner@2.0.3').then(({ toast }) => {
+    import('sonner').then(({ toast }) => {
       toast.success('🌱 Fresh start! Your adulting journey has been reset to level 1!', { 
         duration: 3000 
       });
